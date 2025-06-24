@@ -143,11 +143,17 @@ class MorpheoCalculator {
         
         $table_name = $wpdb->prefix . 'morpheo_calculator_results';
         $result = $wpdb->insert($table_name, $data);
-        
+
         if ($result) {
             wp_send_json_success(array('message' => 'Data saved successfully', 'id' => $wpdb->insert_id));
         } else {
-            wp_send_json_error(array('message' => 'Failed to save data'));
+            $error_message = $wpdb->last_error;
+            if (function_exists('wp_log_error')) {
+                wp_log_error('Morpheo Calculator insert failed: ' . $error_message);
+            } else {
+                error_log('Morpheo Calculator insert failed: ' . $error_message);
+            }
+            wp_send_json_error(array('message' => 'Failed to save data', 'error' => $error_message));
         }
     }
     
