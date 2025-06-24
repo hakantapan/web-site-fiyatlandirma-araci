@@ -356,6 +356,7 @@
                             <!-- Time slots will be populated by JavaScript -->
                         </div>
                     </div>
+                    <div id="appointment-error" class="error-message hidden"></div>
                     <button id="confirm-appointment-btn" class="btn btn-primary btn-large" disabled>
                         ✅ Randevuyu Onayla
                     </button>
