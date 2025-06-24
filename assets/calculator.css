@@ -749,6 +749,12 @@
   display: none !important;
 }
 
+.error-message {
+  color: #dc3545;
+  font-size: 0.9em;
+  margin-top: 8px;
+}
+
 .text-center {
   text-align: center;
 }

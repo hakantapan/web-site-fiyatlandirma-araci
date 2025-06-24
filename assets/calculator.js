@@ -472,9 +472,17 @@
 
   function confirmAppointment() {
     const appointmentDate = $("#appointment-date").val()
+    const errorEl = $("#appointment-error")
 
-    if (!appointmentDate || !calculatorData.appointmentTime) {
-      alert("Lütfen tarih ve saat seçin.")
+    errorEl.addClass("hidden").text("")
+
+    if (!appointmentDate) {
+      errorEl.text("Lütfen randevu tarihi seçin.").removeClass("hidden")
+      return
+    }
+
+    if (!calculatorData.appointmentTime) {
+      errorEl.text("Lütfen randevu saati seçin.").removeClass("hidden")
       return
     }
 

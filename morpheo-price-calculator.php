@@ -26,8 +26,6 @@ class MorpheoCalculator {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('wp_ajax_save_calculator_data', array($this, 'save_calculator_data'));
         add_action('wp_ajax_nopriv_save_calculator_data', array($this, 'save_calculator_data'));
-        add_action('wp_ajax_book_appointment', array($this, 'book_appointment'));
-        add_action('wp_ajax_nopriv_book_appointment', array($this, 'book_appointment'));
         
         // Admin hooks
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -151,41 +149,6 @@ class MorpheoCalculator {
         }
     }
     
-    public function book_appointment() {
-        check_ajax_referer('morpheo_calculator_nonce', 'nonce');
-        
-        global $wpdb;
-        
-        $data = array(
-            'calculator_id' => intval($_POST['calculator_id']),
-            'appointment_date' => sanitize_text_field($_POST['appointment_date']),
-            'appointment_time' => sanitize_text_field($_POST['appointment_time']),
-            'payment_status' => 'pending',
-            'created_at' => current_time('mysql')
-        );
-        
-        $table_name = $wpdb->prefix . 'morpheo_calculator_appointments';
-        $result = $wpdb->insert($table_name, $data);
-        
-        if ($result) {
-            // Send email notification
-            $this->send_appointment_email($data);
-            wp_send_json_success(array('message' => 'Appointment booked successfully'));
-        } else {
-            wp_send_json_error(array('message' => 'Failed to book appointment'));
-        }
-    }
-    
-    private function send_appointment_email($appointment_data) {
-        $admin_email = get_option('admin_email');
-        $subject = 'New Appointment Booking - Morpheo Calculator';
-        $message = "New appointment booking:\n\n";
-        $message .= "Date: " . $appointment_data['appointment_date'] . "\n";
-        $message .= "Time: " . $appointment_data['appointment_time'] . "\n";
-        $message .= "Calculator ID: " . $appointment_data['calculator_id'] . "\n";
-        
-        wp_mail($admin_email, $subject, $message);
-    }
     
     public function admin_page() {
         include MORPHEO_CALC_PLUGIN_PATH . 'admin/admin-page.php';
