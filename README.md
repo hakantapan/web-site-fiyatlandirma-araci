@@ -25,9 +25,8 @@ Add the shortcode `[morpheo_web_calculator]` to any post or page where you want 
 
 Example:
 
-```
+\`\`\`
 [morpheo_web_calculator theme="light" show_appointment="false"]
-```
+\`\`\`
 
 Save the page and visit it on the front‑end to see the calculator in action.
-
