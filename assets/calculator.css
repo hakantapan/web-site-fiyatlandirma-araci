@@ -319,6 +319,10 @@
   transition: all 0.3s ease;
   background: #ffffff;
   position: relative;
+  display: flex;
+ flex-wrap: nowrap;
+  align-items: center;
+
 }
 
 .dark-mode .design-option,
@@ -328,6 +332,10 @@
 .dark-mode .module-option {
   border-color: #334155;
   background-color: #334155;
+    position: relative;
+  display: flex;
+ flex-wrap: nowrap;
+  align-items: center;
 }
 
 .design-option:hover,
