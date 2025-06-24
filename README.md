@@ -1,30 +1,33 @@
-# morpheowebcalculatorwordpresspl
+# Morpheo Dijital Website Price Calculator
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A WordPress plugin for estimating website project costs and allowing visitors to book an appointment.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/hakantapans-projects/v0-morpheowebcalculatorwordpresspl-hw)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/Xgxr2GvB65t)
+## Installation
 
-## Overview
+1. Copy the plugin folder into your WordPress installation under `wp-content/plugins`.
+2. In the admin dashboard open **Plugins** and activate **Morpheo Dijital Website Price Calculator**.
+3. Activation will create the database tables used to store calculation results and appointments.
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Settings
 
-## Deployment
+Navigate to **Price Calculator → Settings** in the WordPress admin menu.
 
-Your project is live at:
+- **Appointment Redirect URL** – URL of the page that opens when a visitor confirms an appointment. This is usually a contact form or booking page. Update the value and save changes.
 
-**[https://vercel.com/hakantapans-projects/v0-morpheowebcalculatorwordpresspl-hw](https://vercel.com/hakantapans-projects/v0-morpheowebcalculatorwordpresspl-hw)**
+## Usage
 
-## Build your app
+Add the shortcode `[morpheo_web_calculator]` to any post or page where you want the calculator displayed.
 
-Continue building your app on:
+### Shortcode parameters
 
-**[https://v0.dev/chat/projects/Xgxr2GvB65t](https://v0.dev/chat/projects/Xgxr2GvB65t)**
+- `theme` – `dark` (default) or `light` to set the initial theme.
+- `show_appointment` – `true` (default) or `false` to hide the appointment booking step.
 
-## How It Works
+Example:
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+```
+[morpheo_web_calculator theme="light" show_appointment="false"]
+```
+
+Save the page and visit it on the front‑end to see the calculator in action.
+
