@@ -320,9 +320,8 @@
   background: #ffffff;
   position: relative;
   display: flex;
- flex-wrap: nowrap;
+  flex-wrap: nowrap;
   align-items: center;
-
 }
 
 .dark-mode .design-option,
@@ -332,9 +331,9 @@
 .dark-mode .module-option {
   border-color: #334155;
   background-color: #334155;
-    position: relative;
+  position: relative;
   display: flex;
- flex-wrap: nowrap;
+  flex-wrap: nowrap;
   align-items: center;
 }
 
@@ -391,6 +390,7 @@
 
 .dark-mode .design-option label,
 .dark-mode .feature-option label,
+.dark-mode .timeline-option label,
 .dark-mode .seo-option label,
 .dark-mode .timeline-option label,
 .dark-mode .module-option label {
@@ -553,12 +553,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999; /* z-index'i artırdık */
   backdrop-filter: blur(4px);
 }
 
 .modal.hidden {
-  display: none;
+  display: none !important; /* !important ekledik */
 }
 
 .modal-content {

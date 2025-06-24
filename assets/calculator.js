@@ -171,9 +171,12 @@
     $("#prev-btn").on("click", previousStep)
     $("#next-btn").on("click", nextStep)
 
-    // Modal events
+    // Modal events - bu kısmı bindEvents fonksiyonunda güncelleyelim
     $(".modal-close").on("click", closeModal)
-    $("#book-appointment-btn").on("click", showAppointmentModal)
+    $("#book-appointment-btn").on("click", (e) => {
+      e.preventDefault()
+      showAppointmentModal()
+    })
     $("#appointment-date").on("change", loadTimeSlots)
     $(document).on("click", ".time-slot", selectTimeSlot)
     $("#confirm-appointment-btn").on("click", confirmAppointment)
@@ -394,12 +397,25 @@
   }
 
   function showAppointmentModal() {
+    console.log("Opening appointment modal...")
     $("#price-modal").addClass("hidden")
+
+    // Make sure appointment dates are generated
+    if ($("#appointment-date option").length <= 1) {
+      console.log("Generating appointment dates...")
+      generateAppointmentDates()
+    }
+
     $("#appointment-modal").removeClass("hidden")
+    console.log("Appointment modal should be visible now")
   }
 
   function generateAppointmentDates() {
     const dateSelect = $("#appointment-date")
+
+    // Clear existing options except the first one
+    dateSelect.find("option:not(:first)").remove()
+
     const today = new Date()
 
     for (let i = 1; i <= 14; i++) {
