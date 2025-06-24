@@ -101,6 +101,9 @@
       $(this).addClass("selected")
       calculatorData.websiteType = $(this).data("type")
 
+      // Clear any error messages when user makes a selection
+      hideErrorMessage(1)
+
       // Show/hide e-commerce modules
       if (calculatorData.websiteType === "ecommerce") {
         $("#ecommerce-modules").show()
@@ -116,6 +119,7 @@
     $("#page-count-slider").on("input", function () {
       calculatorData.pageCount = Number.parseInt($(this).val())
       $("#page-count-value").text(calculatorData.pageCount)
+      hideErrorMessage(1)
     })
 
     // Design complexity
@@ -123,6 +127,7 @@
       calculatorData.designComplexity = $(this).val()
       $(".design-option").removeClass("selected")
       $(this).closest(".design-option").addClass("selected")
+      hideErrorMessage(2)
     })
 
     // Features checkboxes
@@ -144,6 +149,7 @@
       calculatorData.technicalSeo = $(this).val()
       $(".seo-option").removeClass("selected")
       $(this).closest(".seo-option").addClass("selected")
+      hideErrorMessage(3)
     })
 
     // E-commerce modules
@@ -165,6 +171,12 @@
       calculatorData.timeline = $(this).val()
       $(".timeline-option").removeClass("selected")
       $(this).closest(".timeline-option").addClass("selected")
+      hideErrorMessage(4)
+    })
+
+    // Contact form inputs - clear errors on input
+    $("#first-name, #last-name, #email, #phone").on("input", () => {
+      hideErrorMessage(5)
     })
 
     // Navigation buttons
@@ -187,6 +199,18 @@
         closeModal()
       }
     })
+  }
+
+  function showErrorMessage(step, message) {
+    const errorEl = $(`#step-${step}-error`)
+    errorEl.text(message).removeClass("hidden")
+
+    // Scroll to error message
+    errorEl[0].scrollIntoView({ behavior: "smooth", block: "center" })
+  }
+
+  function hideErrorMessage(step) {
+    $(`#step-${step}-error`).addClass("hidden").text("")
   }
 
   function updateProgress() {
@@ -220,6 +244,11 @@
     $(".step-content").addClass("hidden")
     $(`#step-${currentStep}`).removeClass("hidden")
 
+    // Hide all error messages when changing steps
+    for (let i = 1; i <= 5; i++) {
+      hideErrorMessage(i)
+    }
+
     // Update navigation buttons
     $("#prev-btn").prop("disabled", currentStep === 1)
     $("#next-btn").text(currentStep === 5 ? "Fiyatı Hesapla" : "İleri")
@@ -252,30 +281,81 @@
   function validateCurrentStep() {
     switch (currentStep) {
       case 1:
-        return calculatorData.websiteType && calculatorData.pageCount > 0
+        if (!calculatorData.websiteType) {
+          showErrorMessage(1, "Lütfen bir web sitesi türü seçin.")
+          return false
+        }
+        if (!calculatorData.pageCount || calculatorData.pageCount <= 0) {
+          showErrorMessage(1, "Lütfen sayfa sayısını belirleyin.")
+          return false
+        }
+        return true
+
       case 2:
-        return true // Optional features
+        if (!calculatorData.designComplexity) {
+          showErrorMessage(2, "Lütfen bir tasarım yaklaşımı seçin.")
+          return false
+        }
+        return true
+
       case 3:
-        return calculatorData.technicalSeo
+        if (!calculatorData.technicalSeo) {
+          showErrorMessage(3, "Lütfen bir SEO paketi seçin.")
+          return false
+        }
+        return true
+
       case 4:
-        return calculatorData.designComplexity && calculatorData.timeline
+        if (!calculatorData.timeline) {
+          showErrorMessage(4, "Lütfen proje teslim süresini seçin.")
+          return false
+        }
+        return true
+
       case 5:
         const firstName = $("#first-name").val().trim()
         const lastName = $("#last-name").val().trim()
         const email = $("#email").val().trim()
         const phone = $("#phone").val().trim()
 
-        if (!firstName || !lastName || !email || !phone) {
-          alert("Lütfen zorunlu alanları doldurun.")
+        if (!firstName) {
+          showErrorMessage(5, "Lütfen adınızı girin.")
+          $("#first-name").focus()
+          return false
+        }
+
+        if (!lastName) {
+          showErrorMessage(5, "Lütfen soyadınızı girin.")
+          $("#last-name").focus()
+          return false
+        }
+
+        if (!email) {
+          showErrorMessage(5, "Lütfen e-posta adresinizi girin.")
+          $("#email").focus()
           return false
         }
 
         if (!isValidEmail(email)) {
-          alert("Lütfen geçerli bir e-posta adresi girin.")
+          showErrorMessage(5, "Lütfen geçerli bir e-posta adresi girin.")
+          $("#email").focus()
+          return false
+        }
+
+        if (!phone) {
+          showErrorMessage(5, "Lütfen telefon numaranızı girin.")
+          $("#phone").focus()
+          return false
+        }
+
+        if (!isValidPhone(phone)) {
+          showErrorMessage(5, "Lütfen geçerli bir telefon numarası girin.")
+          $("#phone").focus()
           return false
         }
 
         return true
+
       default:
         return false
     }
@@ -284,6 +364,13 @@
   function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
+  }
+
+  function isValidPhone(phone) {
+    // Turkish phone number validation (basic)
+    const phoneRegex = /^(\+90|0)?[5][0-9]{9}$/
+    const cleanPhone = phone.replace(/[\s\-$$$$]/g, "")
+    return phoneRegex.test(cleanPhone) || cleanPhone.length >= 10
   }
 
   function collectUserData() {
@@ -368,10 +455,8 @@
       if (response.success) {
         calculatorData.calculatorId = response.data.id
       } else {
-        console.error('Failed to save calculator data', response.data)
-        alert(
-          'Hesaplama kaydedilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.'
-        )
+        console.error("Failed to save calculator data", response.data)
+        alert("Hesaplama kaydedilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.")
       }
     })
   }

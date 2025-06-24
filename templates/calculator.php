@@ -69,6 +69,7 @@
                         <span>50+ Sayfa</span>
                     </div>
                 </div>
+                <div id="step-1-error" class="error-message hidden"></div>
             </div>
 
             <!-- Step 2: Design & Features -->
@@ -150,6 +151,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="step-2-error" class="error-message hidden"></div>
             </div>
 
             <!-- Step 3: Technical Features -->
@@ -235,6 +237,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="step-3-error" class="error-message hidden"></div>
             </div>
 
             <!-- Step 4: Timeline -->
@@ -271,6 +274,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="step-4-error" class="error-message hidden"></div>
             </div>
 
             <!-- Step 5: Contact Information -->
@@ -301,6 +305,7 @@
                         <input type="text" id="city" placeholder="Şehriniz (opsiyonel)">
                     </div>
                 </div>
+                <div id="step-5-error" class="error-message hidden"></div>
             </div>
 
             <!-- Navigation Buttons -->

@@ -749,10 +749,45 @@
   display: none !important;
 }
 
+/* Error message styles */
 .error-message {
-  color: #dc3545;
-  font-size: 0.9em;
-  margin-top: 8px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.error-message.hidden {
+  display: none;
+}
+
+/* Dark mode error message */
+.dark-mode .error-message {
+  background-color: #450a0a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+/* Focus styles for form inputs */
+input:focus,
+select:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Invalid input styles */
+input.invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px #dc2626;
+}
+
+.dark-mode input.invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444;
 }
 
 .text-center {
