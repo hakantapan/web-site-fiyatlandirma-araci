@@ -478,11 +478,12 @@
       return
     }
 
-    // Instead of AJAX, redirect to external booking/payment page
-    const bookingUrl = "https://hakantapan.com/randevu-al" // Bu URL'i kendi sayfanızla değiştirin
+    // Geçici çözüm: Ana sayfaya yönlendir veya iletişim sayfasına
+    const bookingUrl = "https://hakantapan.com/iletisim" // veya "https://hakantapan.com"
 
     // Optional: Add parameters to URL for pre-filling form
     const params = new URLSearchParams({
+      subject: "Randevu Talebi",
       date: appointmentDate,
       time: calculatorData.appointmentTime,
       name: calculatorData.userData.firstName + " " + calculatorData.userData.lastName,
@@ -497,6 +498,8 @@
 
     // Close modal and show success message
     closeModal()
-    alert("Randevu sayfasına yönlendiriliyorsunuz...")
+    alert(
+      "Randevu talebiniz için iletişim sayfasına yönlendiriliyorsunuz. Lütfen formu doldurun ve randevu bilgilerinizi belirtin.",
+    )
   }
 })(window.jQuery)
