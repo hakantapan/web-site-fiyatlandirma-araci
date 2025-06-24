@@ -32,6 +32,7 @@ class MorpheoCalculator {
         // Admin hooks
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
+        add_action('admin_init', array($this, 'register_settings'));
         
         // Activation/Deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -53,7 +54,8 @@ class MorpheoCalculator {
         // Localize script for AJAX
         wp_localize_script('morpheo-calculator-js', 'morpheo_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('morpheo_calculator_nonce')
+            'nonce' => wp_create_nonce('morpheo_calculator_nonce'),
+            'booking_url' => esc_url(get_option('morpheo_booking_url', home_url('/iletisim')))
         ));
     }
     
@@ -62,6 +64,14 @@ class MorpheoCalculator {
             wp_enqueue_script('morpheo-admin-js', MORPHEO_CALC_PLUGIN_URL . 'assets/admin.js', array('jquery'), MORPHEO_CALC_VERSION, true);
             wp_enqueue_style('morpheo-admin-css', MORPHEO_CALC_PLUGIN_URL . 'assets/admin.css', array(), MORPHEO_CALC_VERSION);
         }
+    }
+
+    public function register_settings() {
+        register_setting('morpheo_calculator_options', 'morpheo_booking_url', array(
+            'type' => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default' => home_url('/iletisim')
+        ));
     }
     
     public function add_admin_menu() {
@@ -191,6 +201,9 @@ class MorpheoCalculator {
     
     public function activate() {
         $this->create_tables();
+        if (get_option('morpheo_booking_url') === false) {
+            add_option('morpheo_booking_url', home_url('/iletisim'));
+        }
         flush_rewrite_rules();
     }
     

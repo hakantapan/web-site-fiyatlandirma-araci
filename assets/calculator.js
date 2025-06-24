@@ -478,8 +478,8 @@
       return
     }
 
-    // Geçici çözüm: Ana sayfaya yönlendir veya iletişim sayfasına
-    const bookingUrl = "https://hakantapan.com/iletisim" // veya "https://hakantapan.com"
+    // Redirect URL is provided via localized script
+    const bookingUrl = window.morpheo_ajax.booking_url || "https://hakantapan.com/iletisim"
 
     // Optional: Add parameters to URL for pre-filling form
     const params = new URLSearchParams({
