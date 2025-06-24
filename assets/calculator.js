@@ -478,21 +478,25 @@
       return
     }
 
-    const data = {
-      action: "book_appointment",
-      nonce: window.morpheo_ajax.nonce,
-      calculator_id: calculatorData.calculatorId,
-      appointment_date: appointmentDate,
-      appointment_time: calculatorData.appointmentTime,
-    }
+    // Instead of AJAX, redirect to external booking/payment page
+    const bookingUrl = "https://hakantapan.com/randevu-al" // Bu URL'i kendi sayfanızla değiştirin
 
-    $.post(window.morpheo_ajax.ajax_url, data, (response) => {
-      if (response.success) {
-        alert("Randevunuz başarıyla kaydedildi! Ödeme sayfasına yönlendiriliyorsunuz...")
-        closeModal()
-      } else {
-        alert("Randevu kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.")
-      }
+    // Optional: Add parameters to URL for pre-filling form
+    const params = new URLSearchParams({
+      date: appointmentDate,
+      time: calculatorData.appointmentTime,
+      name: calculatorData.userData.firstName + " " + calculatorData.userData.lastName,
+      email: calculatorData.userData.email,
+      phone: calculatorData.userData.phone,
+      price_min: $("#price-range").text().split(" - ")[0],
+      price_max: $("#price-range").text().split(" - ")[1],
     })
+
+    // Redirect to booking page
+    window.open(`${bookingUrl}?${params.toString()}`, "_blank")
+
+    // Close modal and show success message
+    closeModal()
+    alert("Randevu sayfasına yönlendiriliyorsunuz...")
   }
 })(window.jQuery)

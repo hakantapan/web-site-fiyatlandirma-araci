@@ -330,6 +330,14 @@
                     <button id="book-appointment-btn" class="btn btn-primary btn-large">
                         💼 Ücretsiz Konsültasyon Randevusu Al
                     </button>
+
+                    <!-- Add a direct link option -->
+                    <div style="margin-top: 16px; text-align: center;">
+                        <p style="color: #64748b; font-size: 14px;">veya</p>
+                        <a href="https://hakantapan.com/randevu-al" target="_blank" class="btn btn-outline" style="margin-top: 8px;">
+                            🔗 Direkt Randevu Sayfasına Git
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
