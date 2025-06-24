@@ -367,6 +367,11 @@
     $.post(window.morpheo_ajax.ajax_url, data, (response) => {
       if (response.success) {
         calculatorData.calculatorId = response.data.id
+      } else {
+        console.error('Failed to save calculator data', response.data)
+        alert(
+          'Hesaplama kaydedilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.'
+        )
       }
     })
   }
