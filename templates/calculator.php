@@ -82,7 +82,7 @@
                             <label for="design-basic">
                                 <div class="option-content">
                                     <span>Temel Tasarım</span>
-                                    <span class="option-info" title="Hazır şablonlar kullanılarak hızlı çözüm">ℹ️</span>
+                                    <span class="option-info" title="Hazır WordPress temaları kullanılarak hızlı çözüm. Temel özelleştirmeler, logo entegrasyonu ve renk uyarlaması dahil. 2-3 hafta içinde teslim. Küçük işletmeler ve hızlı başlangıç için ideal.">ℹ️</span>
                                 </div>
                                 <span class="option-price">Ek ücret yok</span>
                             </label>
@@ -92,7 +92,7 @@
                             <label for="design-custom">
                                 <div class="option-content">
                                     <span>Özel Tasarım</span>
-                                    <span class="option-info" title="Markanıza özel tasarım çalışması">ℹ️</span>
+                                    <span class="option-info" title="Markanıza özel tasarım çalışması. Benzersiz layout, özel grafik tasarımlar, marka kimliğine uygun renk paleti ve tipografi. Responsive tasarım garantisi. Orta ölçekli işletmeler için önerilen seçenek.">ℹ️</span>
                                 </div>
                                 <span class="option-price">+%50 ek ücret</span>
                             </label>
@@ -102,7 +102,7 @@
                             <label for="design-premium">
                                 <div class="option-content">
                                     <span>Premium Tasarım</span>
-                                    <span class="option-info" title="Tamamen özel, animasyonlu ve interaktif tasarım">ℹ️</span>
+                                    <span class="option-info" title="Tamamen özel, animasyonlu ve interaktif tasarım. Micro-interactions, paralaks efektler, özel animasyonlar, gelişmiş UX/UI tasarımı. A/B test optimizasyonu ve kullanıcı deneyimi analizi dahil. Büyük şirketler ve premium markalar için.">ℹ️</span>
                                 </div>
                                 <span class="option-price">+%100 ek ücret</span>
                             </label>
@@ -118,6 +118,7 @@
                             <label for="seo">
                                 <div class="option-content">
                                     <span>SEO Optimizasyonu</span>
+                                    <span class="option-info" title="Kapsamlı arama motoru optimizasyonu: Meta etiketler, yapılandırılmış veri, XML sitemap, robots.txt, sayfa hızı optimizasyonu, mobil uyumluluk, Google Analytics ve Search Console kurulumu. İlk 3 ayda %40-60 organik trafik artışı hedeflenir.">ℹ️</span>
                                 </div>
                                 <span class="feature-price">+3,000 ₺</span>
                             </label>
@@ -127,6 +128,7 @@
                             <label for="cms">
                                 <div class="option-content">
                                     <span>İçerik Yönetim Sistemi</span>
+                                    <span class="option-info" title="Kullanıcı dostu admin paneli ile kolay içerik yönetimi. Sayfa/blog yazısı ekleme, medya yönetimi, menü düzenleme, kullanıcı rolleri ve yetkilendirme sistemi. Eğitim videoları ve 3 aylık teknik destek dahil.">ℹ️</span>
                                 </div>
                                 <span class="feature-price">+5,000 ₺</span>
                             </label>
@@ -136,6 +138,7 @@
                             <label for="multilang">
                                 <div class="option-content">
                                     <span>Çoklu Dil Desteği</span>
+                                    <span class="option-info" title="Profesyonel çoklu dil sistemi: Dil değiştirici, URL yapısı optimizasyonu, her dil için ayrı SEO ayarları, otomatik dil algılama, RTL dil desteği. 2 dil kurulumu dahil, ek diller için +500₺/dil.">ℹ️</span>
                                 </div>
                                 <span class="feature-price">+4,000 ₺</span>
                             </label>
@@ -145,6 +148,7 @@
                             <label for="payment">
                                 <div class="option-content">
                                     <span>Ödeme Sistemi Entegrasyonu</span>
+                                    <span class="option-info" title="Güvenli ödeme altyapısı: İyzico, PayTR, Stripe entegrasyonu. Kredi kartı, havale/EFT, kapıda ödeme seçenekleri. SSL sertifikası, PCI DSS uyumluluk, otomatik fatura sistemi ve ödeme raporlama dahil.">ℹ️</span>
                                 </div>
                                 <span class="feature-price">+6,000 ₺</span>
                             </label>
@@ -164,7 +168,7 @@
                             <label for="seo-none">
                                 <div class="option-content">
                                     <span>SEO İstemiyorum</span>
-                                    <span class="option-info" title="Temel SEO bile yapılmayacak">ℹ️</span>
+                                    <span class="option-info" title="Hiçbir SEO çalışması yapılmaz. Site arama motorlarında görünmeyebilir. Sadece mevcut müşterilerinizin direkt erişim sağladığı siteler için uygundur. Önerilmez.">ℹ️</span>
                                 </div>
                             </label>
                         </div>
@@ -173,7 +177,7 @@
                             <label for="seo-basic">
                                 <div class="option-content">
                                     <span>Temel SEO Kurulumu</span>
-                                    <span class="option-info" title="Meta etiketler, sitemap, temel optimizasyon">ℹ️</span>
+                                    <span class="option-info" title="Temel SEO gereksinimleri: Title/meta description optimizasyonu, H1-H6 etiket yapısı, alt text'ler, temel XML sitemap, robots.txt, Google Analytics kurulumu. Yerel işletmeler ve küçük siteler için yeterli.">ℹ️</span>
                                 </div>
                                 <span class="option-price">+2,500 ₺</span>
                             </label>
@@ -183,7 +187,7 @@
                             <label for="seo-advanced">
                                 <div class="option-content">
                                     <span>Gelişmiş SEO Çalışması</span>
-                                    <span class="option-info" title="Detaylı anahtar kelime analizi, içerik optimizasyonu">ℹ️</span>
+                                    <span class="option-info" title="Kapsamlı SEO stratejisi: Anahtar kelime araştırması, rakip analizi, teknik SEO audit, sayfa hızı optimizasyonu, yapılandırılmış veri, yerel SEO, backlink stratejisi, 6 aylık SEO takip raporu. Rekabetçi sektörler için şart.">ℹ️</span>
                                 </div>
                                 <span class="option-price">+5,000 ₺</span>
                             </label>
@@ -200,7 +204,7 @@
                             <label for="inventory">
                                 <div class="option-content">
                                     <span>Gelişmiş Stok Yönetimi</span>
-                                    <span class="option-info" title="Detaylı stok takibi ve raporlama">ℹ️</span>
+                                    <span class="option-info" title="Profesyonel stok takip sistemi: Çoklu depo yönetimi, otomatik stok uyarıları, barkod sistemi, stok hareketleri raporu, minimum stok seviyeleri, tedarikçi yönetimi. Büyük ürün kataloğu olan işletmeler için kritik.">ℹ️</span>
                                 </div>
                                 <span class="module-price">+3,500 ₺</span>
                             </label>
@@ -210,7 +214,7 @@
                             <label for="multivendor">
                                 <div class="option-content">
                                     <span>Çoklu Satıcı Sistemi</span>
-                                    <span class="option-info" title="Marketplace özelliği">ℹ️</span>
+                                    <span class="option-info" title="Marketplace platformu: Satıcı kayıt sistemi, komisyon yönetimi, satıcı paneli, ürün onay süreci, ayrı faturalandırma, satıcı performans raporları. Amazon/Trendyol benzeri platform kurmak isteyenler için.">ℹ️</span>
                                 </div>
                                 <span class="module-price">+8,000 ₺</span>
                             </label>
@@ -220,7 +224,7 @@
                             <label for="subscription">
                                 <div class="option-content">
                                     <span>Abonelik Sistemi</span>
-                                    <span class="option-info" title="Tekrarlayan ödemeler">ℹ️</span>
+                                    <span class="option-info" title="Tekrarlayan ödeme sistemi: Aylık/yıllık abonelikler, otomatik yenileme, abonelik planları, deneme süreleri, abonelik yönetim paneli, churn analizi. SaaS ürünler ve abonelik modeli işletmeler için.">ℹ️</span>
                                 </div>
                                 <span class="module-price">+4,500 ₺</span>
                             </label>
@@ -230,7 +234,7 @@
                             <label for="mobile-app">
                                 <div class="option-content">
                                     <span>Mobil Uygulama</span>
-                                    <span class="option-info" title="iOS ve Android uygulaması">ℹ️</span>
+                                    <span class="option-info" title="Native iOS ve Android uygulaması: Push bildirimler, offline çalışma, kamera entegrasyonu, GPS lokasyon, uygulama mağazası yayınlama, 1 yıl güncelleme desteği. Müşteri sadakati artırmak için güçlü araç.">ℹ️</span>
                                 </div>
                                 <span class="module-price">+12,000 ₺</span>
                             </label>
@@ -250,6 +254,7 @@
                             <label for="timeline-standard">
                                 <div class="option-content">
                                     <span>Standart (4-6 Hafta)</span>
+                                    <span class="option-info" title="Normal çalışma temposu: Detaylı planlama, kaliteli tasarım süreci, kapsamlı test aşaması, revizyon hakları. En kaliteli sonuç için önerilen süre. Çoğu proje için ideal zaman dilimi.">ℹ️</span>
                                 </div>
                                 <span class="option-price">Ek ücret yok</span>
                             </label>
@@ -259,6 +264,7 @@
                             <label for="timeline-fast">
                                 <div class="option-content">
                                     <span>Hızlı (2-3 Hafta)</span>
+                                    <span class="option-info" title="Hızlandırılmış süreç: Öncelikli çalışma, ek ekip kaynağı, sınırlı revizyon hakkı. Acil lansmanlar için uygun. Bazı detay çalışmaları kısıtlanabilir.">ℹ️</span>
                                 </div>
                                 <span class="option-price">+%30 ek ücret</span>
                             </label>
@@ -268,6 +274,7 @@
                             <label for="timeline-urgent">
                                 <div class="option-content">
                                     <span>Acil (1-2 Hafta)</span>
+                                    <span class="option-info" title="Acil durum süreci: 7/24 çalışma, tüm ekip kaynağı, minimum revizyon. Sadece kritik durumlar için. Ek özellikler sınırlanabilir, temel fonksiyonlara odaklanılır.">ℹ️</span>
                                 </div>
                                 <span class="option-price">+%60 ek ücret</span>
                             </label>
