@@ -404,14 +404,102 @@
   gap: 8px;
 }
 
+/* Tooltip Styles */
 .option-info {
+  position: relative;
   cursor: help;
   color: #64748b;
   font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(100, 116, 139, 0.1);
+  transition: all 0.3s ease;
 }
 
 .dark-mode .option-info {
   color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.option-info:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  transform: scale(1.1);
+}
+
+.dark-mode .option-info:hover {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+/* Tooltip */
+.option-info::before {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 200px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.dark-mode .option-info::before {
+  background: #374151;
+  color: #f9fafb;
+}
+
+/* Tooltip arrow */
+.option-info::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #1f2937;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.dark-mode .option-info::after {
+  border-top-color: #374151;
+}
+
+/* Show tooltip on hover */
+.option-info:hover::before,
+.option-info:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Responsive tooltip positioning */
+@media (max-width: 768px) {
+  .option-info::before {
+    max-width: 150px;
+    font-size: 11px;
+    padding: 6px 8px;
+  }
 }
 
 /* Price Display */
