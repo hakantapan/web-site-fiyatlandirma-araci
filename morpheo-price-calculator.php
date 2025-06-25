@@ -2,6 +2,7 @@
 /**
  * Plugin Name: Morpheo Dijital Website Price Calculator
  * Plugin URI: https://morpheodijital.com
+ * GitHub Plugin URI: https://github.com/hakantapan/web-site-fiyatlandirma-araci
  * Description: Professional website price calculator with dark mode, e-commerce modules, and appointment booking
  * Version: 2.0.0
  * Author: Morpheo Dijital
