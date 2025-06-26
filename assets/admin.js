@@ -40,6 +40,21 @@
       updateAppointmentStatus(appointmentId, newStatus)
     })
 
+    // API Check buttons
+    $(".api-check-btn").on("click", function (e) {
+      e.preventDefault()
+      const appointmentId = $(this).data("id")
+      const email = $(this).data("email")
+      checkSinglePayment(appointmentId, email, $(this))
+    })
+
+    // API Response modal
+    $(document).on("click", ".view-api-response", function (e) {
+      e.preventDefault()
+      const email = $(this).data("email")
+      showApiResponse(email)
+    })
+
     // Bulk actions
     $("#bulk-action-apply").on("click", (e) => {
       e.preventDefault()
@@ -93,12 +108,125 @@
     )
   }
 
+  function checkSinglePayment(appointmentId, email, button) {
+    const originalText = button.text()
+    button.prop("disabled", true).text("🔄 Kontrol ediliyor...")
+
+    $.post(
+      ajaxurl,
+      {
+        action: "check_single_payment",
+        appointment_id: appointmentId,
+        email: email,
+        nonce: morpheo_admin.nonce,
+      },
+      (response) => {
+        if (response.success) {
+          if (response.data.payment_info && response.data.payment_info.paid) {
+            // Payment confirmed - reload page to show updated status
+            showNotification("✅ " + response.data.message, "success")
+            setTimeout(() => {
+              location.reload()
+            }, 2000)
+          } else {
+            // No payment found
+            showNotification("⚠️ " + response.data.message, "warning")
+            button.prop("disabled", false).text(originalText)
+
+            // Add button to view raw API response
+            if (!button.next(".view-api-response").length) {
+              button.after(
+                `<button class="button button-small view-api-response" data-email="${email}" style="margin-left: 5px;">📄 API Yanıt</button>`,
+              )
+            }
+          }
+        } else {
+          showNotification("❌ Hata: " + response.data.message, "error")
+          button.prop("disabled", false).text(originalText)
+        }
+      },
+    ).fail(() => {
+      showNotification("❌ AJAX hatası oluştu", "error")
+      button.prop("disabled", false).text(originalText)
+    })
+  }
+
+  function showApiResponse(email) {
+    $.post(
+      ajaxurl,
+      {
+        action: "get_api_response",
+        email: email,
+        nonce: morpheo_admin.nonce,
+      },
+      (response) => {
+        if (response.success) {
+          const data = response.data
+          const modalContent = `
+            <div class="api-response-modal">
+              <h3>🔍 API Yanıt Detayları</h3>
+              <div class="api-info">
+                <p><strong>E-posta:</strong> ${email}</p>
+                <p><strong>HTTP Durum:</strong> ${data.status_code}</p>
+                <p><strong>API URL:</strong> <a href="${data.url}" target="_blank">${data.url}</a></p>
+              </div>
+              
+              <h4>📄 Ham API Yanıtı:</h4>
+              <textarea readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px;">${data.response}</textarea>
+              
+              <h4>🔧 İşlenmiş Sonuç:</h4>
+              <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(data.parsed, null, 2)}</pre>
+              
+              <div style="margin-top: 20px; text-align: center;">
+                <button class="button button-primary modal-close">Kapat</button>
+              </div>
+            </div>
+          `
+          showModal(modalContent)
+        } else {
+          alert("API yanıtı alınamadı: " + response.data.message)
+        }
+      },
+    )
+  }
+
+  function showNotification(message, type = "info") {
+    const notificationClass =
+      {
+        success: "notice-success",
+        warning: "notice-warning",
+        error: "notice-error",
+        info: "notice-info",
+      }[type] || "notice-info"
+
+    const notification = $(`
+      <div class="notice ${notificationClass} is-dismissible" style="margin: 10px 0;">
+        <p>${message}</p>
+        <button type="button" class="notice-dismiss">
+          <span class="screen-reader-text">Dismiss this notice.</span>
+        </button>
+      </div>
+    `)
+
+    $(".wrap h1").after(notification)
+
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+      notification.fadeOut(() => notification.remove())
+    }, 5000)
+
+    // Manual dismiss
+    notification.find(".notice-dismiss").on("click", () => {
+      notification.fadeOut(() => notification.remove())
+    })
+  }
+
   function showModal(content) {
     const modal = $(`
             <div class="modal-overlay">
                 <div class="modal-dialog">
                     <div class="modal-header">
-                        <h3 class="modal-title">Calculator Result Details</h3>
+                        <h3 class="modal-title">Detaylar</h3>
                         <button class="modal-close">&times;</button>
                     </div>
                     <div class="modal-body">

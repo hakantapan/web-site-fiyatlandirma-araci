@@ -27,6 +27,47 @@
         echo '<div class="notice notice-success"><p>Randevu durumu başarıyla güncellendi!</p></div>';
     }
     
+    // Handle API payment check
+    if (isset($_POST['check_single_payment']) && isset($_POST['appointment_id'])) {
+        $appointment_id = intval($_POST['appointment_id']);
+        
+        // Get appointment and customer data
+        $appointment = $wpdb->get_row($wpdb->prepare("
+            SELECT a.*, r.email, r.first_name, r.last_name 
+            FROM $appointments_table a 
+            LEFT JOIN $results_table r ON a.calculator_id = r.id 
+            WHERE a.id = %d
+        ", $appointment_id));
+        
+        if ($appointment && $appointment->email) {
+            $payment_status = MorpheoPaymentAPI::checkPaymentStatus($appointment->email);
+            
+            if ($payment_status && $payment_status['paid']) {
+                $wpdb->update(
+                    $appointments_table,
+                    array(
+                        'payment_status' => 'paid',
+                        'updated_at' => current_time('mysql'),
+                        'notes' => ($appointment->notes ? $appointment->notes . ' | ' : '') . 'API ile doğrulandı: ' . date('d.m.Y H:i')
+                    ),
+                    array('id' => $appointment_id),
+                    array('%s', '%s', '%s'),
+                    array('%d')
+                );
+                
+                echo '<div class="notice notice-success"><p>✅ Ödeme doğrulandı! Randevu durumu güncellendi.</p></div>';
+            } else {
+                echo '<div class="notice notice-warning"><p>⚠️ Henüz ödeme alınmamış veya API yanıtı alınamadı.</p></div>';
+            }
+        }
+    }
+    
+    // Handle bulk API check
+    if (isset($_POST['bulk_api_check'])) {
+        $updated_count = MorpheoPaymentAPI::checkAllPendingPayments();
+        echo '<div class="notice notice-success"><p>🔄 Toplu kontrol tamamlandı! ' . $updated_count . ' randevu güncellendi.</p></div>';
+    }
+    
     // Handle appointment deletion
     if (isset($_POST['delete_appointment']) && isset($_POST['appointment_id'])) {
         $appointment_id = intval($_POST['appointment_id']);
@@ -70,6 +111,13 @@
             <a href="?page=morpheo-calculator-appointments" class="button">Temizle</a>
         </form>
         
+        <div style="float: right; margin-left: 10px;">
+            <form method="post" style="display: inline-block;">
+                <input type="hidden" name="bulk_api_check" value="1">
+                <button type="submit" class="button button-secondary">🔄 Tüm Ödemeleri API ile Kontrol Et</button>
+            </form>
+        </div>
+        
         <div style="float: right;">
             <button id="add-manual-appointment" class="button button-primary">Manuel Randevu Ekle</button>
         </div>
@@ -87,7 +135,7 @@
                 <th>Tahmini Fiyat</th>
                 <th>Durum</th>
                 <th>Ücret</th>
-                <th style="width: 200px;">İşlemler</th>
+                <th style="width: 280px;">İşlemler</th>
             </tr>
         </thead>
         <tbody>
@@ -160,6 +208,15 @@
                             data-notes="<?php echo esc_attr($appointment->notes); ?>">
                         Düzenle
                     </button>
+                    
+                    <?php if ($appointment->payment_status === 'pending' && $appointment->email): ?>
+                    <button class="button button-small api-check-btn" 
+                            data-id="<?php echo $appointment->id; ?>"
+                            data-email="<?php echo esc_attr($appointment->email); ?>">
+                        🔍 API Kontrol
+                    </button>
+                    <?php endif; ?>
+                    
                     <button class="button button-small button-link-delete delete-appointment" 
                             data-id="<?php echo $appointment->id; ?>">
                         Sil
@@ -330,6 +387,50 @@
     border-radius: 4px;
     font-size: 12px;
     font-weight: bold;
+}
+
+.api-check-btn {
+    background-color: #0073aa !important;
+    color: white !important;
+    border-color: #0073aa !important;
+}
+
+.api-check-btn:hover {
+    background-color: #005a87 !important;
+    border-color: #005a87 !important;
+}
+
+.api-check-btn:disabled {
+    background-color: #ccc !important;
+    border-color: #ccc !important;
+    cursor: not-allowed !important;
+}
+
+.view-api-response {
+    background-color: #6c757d !important;
+    color: white !important;
+    border-color: #6c757d !important;
+}
+
+.api-response-modal h3 {
+    margin-bottom: 20px;
+    color: #1d4ed8;
+}
+
+.api-response-modal h4 {
+    margin: 20px 0 10px 0;
+    color: #374151;
+}
+
+.api-info {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.api-info p {
+    margin: 5px 0;
 }
 </style>
 

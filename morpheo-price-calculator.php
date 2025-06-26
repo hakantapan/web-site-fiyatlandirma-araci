@@ -4,7 +4,7 @@
  * Plugin URI: https://morpheodijital.com
  * GitHub Plugin URI: https://github.com/hakantapan/web-site-fiyatlandirma-araci
  * Description: Professional website price calculator with dark mode, e-commerce modules, and appointment booking
- * Version: 2.2.0
+ * Version: 2.2.1
  * Author: Morpheo Dijital
  * License: GPL v2 or later
  * Text Domain: morpheo-calculator
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MORPHEO_CALC_VERSION', '2.2.0');
+define('MORPHEO_CALC_VERSION', '2.2.1');
 define('MORPHEO_CALC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -36,6 +36,10 @@ class MorpheoCalculator {
         add_action('wp_ajax_nopriv_get_available_time_slots', array($this, 'get_available_time_slots'));
         add_action('wp_ajax_book_appointment', array($this, 'book_appointment'));
         add_action('wp_ajax_nopriv_book_appointment', array($this, 'book_appointment'));
+        
+        // Admin AJAX hooks
+        add_action('wp_ajax_check_single_payment', array($this, 'ajax_check_single_payment'));
+        add_action('wp_ajax_get_api_response', array($this, 'ajax_get_api_response'));
         
         // Admin hooks
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -323,6 +327,96 @@ class MorpheoCalculator {
         } else {
             wp_send_json_error(array('message' => 'Failed to book appointment'));
         }
+    }
+    
+    // New AJAX handlers for admin
+    public function ajax_check_single_payment() {
+        check_ajax_referer('morpheo_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized'));
+        }
+        
+        $appointment_id = intval($_POST['appointment_id']);
+        $email = sanitize_email($_POST['email']);
+        
+        if (!$email) {
+            wp_send_json_error(array('message' => 'E-posta adresi gerekli'));
+        }
+        
+        // Check payment status via API
+        $payment_status = MorpheoPaymentAPI::checkPaymentStatus($email);
+        
+        if ($payment_status && $payment_status['paid']) {
+            // Update appointment status
+            global $wpdb;
+            $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
+            
+            $update_result = $wpdb->update(
+                $appointments_table,
+                array(
+                    'payment_status' => 'paid',
+                    'updated_at' => current_time('mysql'),
+                    'notes' => 'API ile manuel kontrol: ' . date('d.m.Y H:i')
+                ),
+                array('id' => $appointment_id),
+                array('%s', '%s', '%s'),
+                array('%d')
+            );
+            
+            if ($update_result) {
+                wp_send_json_success(array(
+                    'message' => 'Ödeme doğrulandı! Randevu durumu güncellendi.',
+                    'payment_info' => $payment_status
+                ));
+            } else {
+                wp_send_json_error(array('message' => 'Veritabanı güncellenirken hata oluştu'));
+            }
+        } else {
+            wp_send_json_success(array(
+                'message' => 'Henüz ödeme alınmamış',
+                'payment_info' => $payment_status
+            ));
+        }
+    }
+    
+    public function ajax_get_api_response() {
+        check_ajax_referer('morpheo_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized'));
+        }
+        
+        $email = sanitize_email($_POST['email']);
+        
+        if (!$email) {
+            wp_send_json_error(array('message' => 'E-posta adresi gerekli'));
+        }
+        
+        // Get raw API response for debugging
+        $api_url = 'https://morpheodijital.com/satis/wp-content/themes/snn-brx-child-theme/siparis-sorgula.php';
+        $api_key = 't3RcN@f9h$5!ZxLuQ1W#pK7eMv%BdA82';
+        
+        $url = $api_url . '?' . http_build_query(array(
+            'email' => $email,
+            'key' => $api_key
+        ));
+        
+        $response = wp_remote_get($url, array('timeout' => 30));
+        
+        if (is_wp_error($response)) {
+            wp_send_json_error(array('message' => 'API hatası: ' . $response->get_error_message()));
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $status_code = wp_remote_retrieve_response_code($response);
+        
+        wp_send_json_success(array(
+            'url' => $url,
+            'status_code' => $status_code,
+            'response' => $body,
+            'parsed' => MorpheoPaymentAPI::checkPaymentStatus($email)
+        ));
     }
     
     public function send_appointment_reminders() {
