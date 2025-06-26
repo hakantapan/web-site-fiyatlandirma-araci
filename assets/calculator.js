@@ -595,7 +595,9 @@
     })
 
     // WooCommerce sitesine yönlendir
-    const paymentUrl = `${woocommerceUrl}?${appointmentParams.toString()}`
+                const separator = woocommerceUrl.includes('?') ? '&' : '?';
+                const paymentUrl = `${woocommerceUrl}${separator}${appointmentParams.toString()}`;
+
 
     // Yeni sekmede aç
     window.open(paymentUrl, "_blank")
