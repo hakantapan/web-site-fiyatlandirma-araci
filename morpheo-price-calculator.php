@@ -54,7 +54,9 @@ class MorpheoCalculator {
         wp_localize_script('morpheo-calculator-js', 'morpheo_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('morpheo_calculator_nonce'),
-            'booking_url' => esc_url(get_option('morpheo_booking_url', home_url('/iletisim')))
+            'booking_url' => esc_url(get_option('morpheo_booking_url', home_url('/iletisim'))),
+            'woocommerce_url' => esc_url(get_option('morpheo_woocommerce_url', 'https://odeme.morpheodijital.com/konsultasyon')),
+            'consultation_fee' => get_option('morpheo_consultation_fee', '250')
         ));
     }
     
@@ -70,6 +72,17 @@ class MorpheoCalculator {
             'type' => 'string',
             'sanitize_callback' => 'esc_url_raw',
             'default' => home_url('/iletisim')
+        ));
+        register_setting('morpheo_calculator_options', 'morpheo_woocommerce_url', array(
+            'type' => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default' => 'https://odeme.morpheodijital.com/konsultasyon'
+        ));
+        
+        register_setting('morpheo_calculator_options', 'morpheo_consultation_fee', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => '250'
         ));
     }
     

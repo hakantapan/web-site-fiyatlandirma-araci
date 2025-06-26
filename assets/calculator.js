@@ -490,6 +490,9 @@
     console.log("Opening appointment modal...")
     $("#price-modal").addClass("hidden")
 
+    // Konsültasyon ücretini göster
+    $("#consultation-fee").text(window.morpheo_ajax.consultation_fee || "250")
+
     // Make sure appointment dates are generated
     if ($("#appointment-date option").length <= 1) {
       console.log("Generating appointment dates...")
@@ -576,16 +579,37 @@
       return
     }
 
-    // Redirect URL is provided via localized script
-    const bookingUrl = window.morpheo_ajax.booking_url || "https://hakantapan.com/iletisim"
+    // WooCommerce URL'si localized script'ten gelir
+    const woocommerceUrl = window.morpheo_ajax.woocommerce_url || "https://odeme.morpheodijital.com/konsultasyon"
 
-    // Open booking page directly in new tab
-    window.open(bookingUrl, "_blank")
+    // Randevu bilgilerini URL parametreleri olarak hazırla
+    const appointmentParams = new URLSearchParams({
+      randevu_tarihi: appointmentDate,
+      randevu_saati: calculatorData.appointmentTime,
+      musteri_adi: calculatorData.userData.firstName + " " + calculatorData.userData.lastName,
+      musteri_email: calculatorData.userData.email,
+      musteri_telefon: calculatorData.userData.phone,
+      proje_tipi: calculatorData.websiteType,
+      tahmini_fiyat: $("#price-range").text(),
+      calculator_id: calculatorData.calculatorId || "",
+    })
 
-    // Close modal and show success message
+    // WooCommerce sitesine yönlendir
+    const paymentUrl = `${woocommerceUrl}?${appointmentParams.toString()}`
+
+    // Yeni sekmede aç
+    window.open(paymentUrl, "_blank")
+
+    // Modal'ı kapat ve bilgi mesajı göster
     closeModal()
+
     alert(
-      "Randevu talebiniz için iletişim sayfasına yönlendiriliyorsunuz. Lütfen formu doldurun ve randevu bilgilerinizi belirtin.",
+      `Ödeme sayfasına yönlendiriliyorsunuz.\n\n` +
+        `Randevu Detayları:\n` +
+        `📅 Tarih: ${new Date(appointmentDate).toLocaleDateString("tr-TR")}\n` +
+        `🕐 Saat: ${calculatorData.appointmentTime}\n` +
+        `💰 Ücret: ${window.morpheo_ajax.consultation_fee} ₺\n\n` +
+        `Ödeme tamamlandıktan sonra randevunuz onaylanacaktır.`,
     )
   }
 })(window.jQuery)

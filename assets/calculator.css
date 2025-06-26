@@ -757,6 +757,43 @@
   color: #93c5fd;
 }
 
+/* Consultation Fee Info */
+.consultation-fee-info {
+  margin-bottom: 24px;
+}
+
+.fee-notice {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05));
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  color: #166534;
+  font-size: 1.6rem;
+  line-height: 1.6;
+}
+
+.dark-mode .fee-notice {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1));
+  color: #86efac;
+}
+
+.fee-notice strong {
+  display: block;
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+  color: #15803d;
+}
+
+.dark-mode .fee-notice strong {
+  color: #4ade80;
+}
+
+.fee-notice p {
+  margin: 8px 0 0 0;
+  font-size: 1.4rem;
+  opacity: 0.9;
+}
+
 /* Time Slots */
 .time-slots {
   display: grid;

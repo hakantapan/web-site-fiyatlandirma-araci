@@ -4,14 +4,22 @@
     <form method="post" action="options.php">
         <?php settings_fields('morpheo_calculator_options'); ?>
         <div class="card">
-            <h2>Appointment Settings</h2>
-            <?php $booking_url = esc_url(get_option('morpheo_booking_url', home_url('/iletisim'))); ?>
+            <h2>Konsültasyon Ayarları</h2>
+            <?php $woocommerce_url = esc_url(get_option('morpheo_woocommerce_url', 'https://odeme.morpheodijital.com/konsultasyon')); ?>
             <table class="form-table">
                 <tr valign="top">
-                    <th scope="row">Appointment Redirect URL</th>
+                    <th scope="row">WooCommerce Ödeme URL'si</th>
                     <td>
-                        <input type="text" name="morpheo_booking_url" value="<?php echo $booking_url; ?>" class="regular-text" />
-                        <p class="description">Link to open after confirming appointment.</p>
+                        <input type="text" name="morpheo_woocommerce_url" value="<?php echo $woocommerce_url; ?>" class="regular-text" />
+                        <p class="description">Ücretli konsültasyon ödemesi için WooCommerce ürün sayfası URL'si.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Konsültasyon Ücreti</th>
+                    <td>
+                        <?php $consultation_fee = get_option('morpheo_consultation_fee', '250'); ?>
+                        <input type="number" name="morpheo_consultation_fee" value="<?php echo $consultation_fee; ?>" class="small-text" /> ₺
+                        <p class="description">Konsültasyon randevusu ücreti.</p>
                     </td>
                 </tr>
             </table>

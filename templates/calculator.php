@@ -340,7 +340,7 @@
                         <strong>📋 Önemli Not:</strong> Bu fiyat aralığı tahminidir ve proje detaylarına göre değişiklik gösterebilir. Kesin fiyat teklifi için detaylı görüşme yapılması gerekmektedir.
                     </div>
                     <button id="book-appointment-btn" class="btn btn-primary btn-large">
-                        💼 Ücretsiz Konsültasyon Randevusu Al
+                        💼 Ücretli Konsültasyon Randevusu Al
                     </button>
                 </div>
             </div>
@@ -351,11 +351,17 @@
     <div id="appointment-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📅 Ücretsiz Konsültasyon Randevusu</h2>
+                <h2>📅 Ücretli Konsültasyon Randevusu</h2>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="appointment-form">
+                    <div class="consultation-fee-info">
+                        <div class="fee-notice">
+                            <strong>💰 Konsültasyon Ücreti:</strong> <span id="consultation-fee"></span> ₺
+                            <p>Detaylı proje analizi ve özel çözüm önerileri için profesyonel konsültasyon hizmeti.</p>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label>Randevu Tarihi Seçin</label>
                         <select id="appointment-date">
@@ -370,7 +376,7 @@
                     </div>
                     <div id="appointment-error" class="error-message hidden"></div>
                     <button id="confirm-appointment-btn" class="btn btn-primary btn-large" disabled>
-                        ✅ Randevuyu Onayla
+                        💳 Ödeme Yap ve Randevuyu Onayla
                     </button>
                 </div>
             </div>
