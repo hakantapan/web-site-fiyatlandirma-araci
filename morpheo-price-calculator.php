@@ -23,6 +23,7 @@ define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 // Include required files
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-templates.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-sender.php';
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-reminder.php';
 
 class MorpheoCalculator {
     
@@ -50,11 +51,20 @@ class MorpheoCalculator {
         if (!wp_next_scheduled('morpheo_send_appointment_reminders')) {
             wp_schedule_event(time(), 'daily', 'morpheo_send_appointment_reminders');
         }
+        
+        // Schedule payment reminders (every 5 minutes)
+        add_action('morpheo_check_pending_payments', array('MorpheoPaymentReminder', 'checkPendingPayments'));
+        if (!wp_next_scheduled('morpheo_check_pending_payments')) {
+            wp_schedule_event(time(), 'morpheo_5min', 'morpheo_check_pending_payments');
+        }
     }
     
     public function init() {
         // Add shortcode
         add_shortcode('morpheo_web_calculator', array($this, 'calculator_shortcode'));
+        
+        // Add custom cron interval
+        add_filter('cron_schedules', array($this, 'add_cron_intervals'));
         
         // Load text domain
         load_plugin_textdomain('morpheo-calculator', false, dirname(plugin_basename(__FILE__)) . '/languages');
@@ -271,15 +281,33 @@ class MorpheoCalculator {
             ));
             
             if ($calculator_data) {
-                // Send emails
+                // Create payment URL with appointment details
+                $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://odeme.morpheodijital.com/konsultasyon');
+                
+                $payment_params = array(
+                    'randevu_tarihi' => $appointment_date,
+                    'randevu_saati' => $appointment_time,
+                    'musteri_adi' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
+                    'musteri_email' => $calculator_data->email,
+                    'musteri_telefon' => $calculator_data->phone,
+                    'proje_tipi' => $calculator_data->website_type,
+                    'calculator_id' => $calculator_id,
+                    'appointment_id' => $appointment_id,
+                    'ucret' => $consultation_fee
+                );
+                
+                $separator = strpos($woocommerce_url, '?') !== false ? '&' : '?';
+                $payment_url = $woocommerce_url . $separator . http_build_query($payment_params);
+                
+                // Send emails with payment URL
                 $appointment_data = array(
                     'appointment_id' => $appointment_id,
                     'appointment_date' => $appointment_date,
                     'appointment_time' => $appointment_time
                 );
                 
-                // Send customer confirmation email
-                MorpheoEmailSender::sendCustomerConfirmation($appointment_data, $calculator_data);
+                // Send customer confirmation email with payment link
+                MorpheoEmailSender::sendCustomerConfirmation($appointment_data, $calculator_data, $payment_url);
                 
                 // Send admin notification email
                 MorpheoEmailSender::sendAdminNotification($appointment_data, $calculator_data);
@@ -287,7 +315,8 @@ class MorpheoCalculator {
             
             wp_send_json_success(array(
                 'message' => 'Appointment booked successfully',
-                'appointment_id' => $appointment_id
+                'appointment_id' => $appointment_id,
+                'payment_url' => $payment_url
             ));
         } else {
             wp_send_json_error(array('message' => 'Failed to book appointment'));
@@ -355,6 +384,7 @@ class MorpheoCalculator {
     
     public function deactivate() {
         wp_clear_scheduled_hook('morpheo_send_appointment_reminders');
+        wp_clear_scheduled_hook('morpheo_check_pending_payments');
         flush_rewrite_rules();
     }
     
@@ -409,6 +439,14 @@ class MorpheoCalculator {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
         dbDelta($sql2);
+    }
+
+    public function add_cron_intervals($schedules) {
+        $schedules['morpheo_5min'] = array(
+            'interval' => 300, // 5 minutes
+            'display' => 'Every 5 Minutes'
+        );
+        return $schedules;
     }
 }
 

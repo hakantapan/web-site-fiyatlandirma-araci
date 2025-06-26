@@ -8,7 +8,7 @@ class MorpheoEmailTemplates {
     /**
      * Customer appointment confirmation email
      */
-    public static function getCustomerConfirmationEmail($data) {
+    public static function getCustomerConfirmationEmail($data, $payment_status = 'pending') {
         $consultation_fee = get_option('morpheo_consultation_fee', '250');
         
         return '
@@ -112,6 +112,53 @@ class MorpheoEmailTemplates {
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Payment Section -->
+                    ' . ($payment_status === 'pending' ? '
+<div class="payment-section" style="background: #fef2f2; border: 2px solid #dc2626; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+    <h4 style="color: #dc2626; margin-bottom: 15px;">💳 Ödeme Bekleniyor</h4>
+    <p style="color: #dc2626; margin-bottom: 20px; font-size: 16px;">
+        <strong>⚠️ Önemli:</strong> Randevunuz geçici olarak rezerve edilmiştir. 
+        Randevunuzu kesinleştirmek için <strong>15 dakika içinde</strong> ödeme yapmanız gerekmektedir.
+    </p>
+    
+    <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <div style="font-size: 18px; color: #1e293b; margin-bottom: 10px;">
+            <strong>Ödeme Tutarı: ' . number_format($consultation_fee, 0, ',', '.') . ' ₺</strong>
+        </div>
+        <div style="font-size: 14px; color: #64748b;">
+            Konsültasyon ücreti - 45-60 dakika detaylı görüşme
+        </div>
+    </div>
+    
+    <a href="' . esc_url($data['payment_url']) . '" 
+       style="display: inline-block; background: linear-gradient(135deg, #dc2626, #991b1b); 
+              color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; 
+              font-weight: 700; font-size: 16px; margin: 10px;">
+        💳 Hemen Ödeme Yap
+    </a>
+    
+    <div style="margin-top: 20px; font-size: 14px; color: #64748b;">
+        <p>Ödeme yapmak için yukarıdaki butona tıklayın veya aşağıdaki linki kullanın:</p>
+        <p style="word-break: break-all; background: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace;">
+            ' . esc_url($data['payment_url']) . '
+        </p>
+    </div>
+    
+    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px;">
+        <p style="color: #92400e; margin: 0; font-size: 14px;">
+            <strong>⏰ Süre Dolumu:</strong> 15 dakika içinde ödeme yapılmazsa randevunuz otomatik olarak iptal olacaktır.
+        </p>
+    </div>
+</div>
+' : '
+<div class="payment-section" style="background: #dcfce7; border: 2px solid #16a34a; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+    <h4 style="color: #166534; margin-bottom: 15px;">✅ Ödeme Tamamlandı</h4>
+    <p style="color: #166534; margin: 0; font-size: 16px;">
+        Ödemeniz başarıyla alınmıştır. Randevunuz onaylanmıştır.
+    </p>
+</div>
+') . '
                     
                     <!-- Project Summary -->
                     <div class="project-summary">
