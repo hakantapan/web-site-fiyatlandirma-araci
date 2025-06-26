@@ -580,7 +580,7 @@
     }
 
     // WooCommerce URL'si localized script'ten gelir
-    const woocommerceUrl = window.morpheo_ajax.woocommerce_url || "https://odeme.morpheodijital.com/konsultasyon"
+    const woocommerceUrl = window.morpheo_ajax.woocommerce_url || "https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu"
 
     // Randevu bilgilerini URL parametreleri olarak hazırla
     const appointmentParams = new URLSearchParams({
