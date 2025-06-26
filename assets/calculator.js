@@ -673,6 +673,10 @@
 
   function showAppointmentModal() {
     $("#price-modal").addClass("hidden")
+
+    // Konsültasyon ücretini göster
+    $("#consultation-fee").text(window.morpheo_ajax.consultation_fee || "250")
+
     if ($("#appointment-date option").length <= 1) {
       generateAppointmentDates()
     }
@@ -789,8 +793,10 @@
       return
     }
 
+    // Disable button to prevent double booking
     $("#confirm-appointment-btn").prop("disabled", true).text("Randevu kaydediliyor...")
 
+    // First book the appointment
     $.post(
       window.morpheo_ajax.ajax_url,
       {
@@ -802,22 +808,50 @@
       },
       (response) => {
         if (response.success) {
+          // Appointment booked successfully, now redirect to payment
+          const woocommerceUrl =
+            window.morpheo_ajax.woocommerce_url ||
+            "https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu"
+
+          // Randevu bilgilerini URL parametreleri olarak hazırla
+          const appointmentParams = new URLSearchParams({
+            randevu_tarihi: appointmentDate,
+            randevu_saati: calculatorData.appointmentTime,
+            musteri_adi: calculatorData.userData.firstName + " " + calculatorData.userData.lastName,
+            musteri_email: calculatorData.userData.email,
+            musteri_telefon: calculatorData.userData.phone,
+            proje_tipi: calculatorData.websiteType,
+            tahmini_fiyat: $("#price-range").text(),
+            calculator_id: calculatorData.calculatorId || "",
+            appointment_id: response.data.appointment_id,
+          })
+
+          // WooCommerce sitesine yönlendir
+          const separator = woocommerceUrl.includes("?") ? "&" : "?"
+          const paymentUrl = `${woocommerceUrl}${separator}${appointmentParams.toString()}`
+
+          // Yeni sekmede aç
+          window.open(paymentUrl, "_blank")
+
+          // Modal'ı kapat ve bilgi mesajı göster
           closeModal()
+
           alert(
-            `🎉 Randevunuz başarıyla kaydedildi!\n\n` +
+            `Randevunuz geçici olarak rezerve edildi ve ödeme sayfasına yönlendiriliyorsunuz.\n\n` +
+              `Randevu Detayları:\n` +
               `📅 Tarih: ${new Date(appointmentDate).toLocaleDateString("tr-TR")}\n` +
-              `🕐 Saat: ${calculatorData.appointmentTime}\n\n` +
-              `📞 Size 24 saat içinde ulaşacağız ve randevunuzu onaylayacağız.\n` +
-              `💼 Bu görüşmede projenizin tüm detaylarını konuşup kesin teklifimizi vereceğiz.`,
+              `🕐 Saat: ${calculatorData.appointmentTime}\n` +
+              `💰 Ücret: ${window.morpheo_ajax.consultation_fee} ₺\n\n` +
+              `⚠️ Önemli: Ödeme işlemini 15 dakika içinde tamamlamazsanız randevunuz iptal olacaktır.`,
           )
         } else {
           errorEl.text(response.data.message || "Randevu kaydedilirken hata oluştu.").removeClass("hidden")
-          $("#confirm-appointment-btn").prop("disabled", false).text("📅 Randevuyu Onayla")
+          $("#confirm-appointment-btn").prop("disabled", false).text("💳 Ödeme Yap ve Randevuyu Onayla")
         }
       },
     ).fail(() => {
       errorEl.text("Randevu kaydedilirken hata oluştu. Lütfen tekrar deneyin.").removeClass("hidden")
-      $("#confirm-appointment-btn").prop("disabled", false).text("📅 Randevuyu Onayla")
+      $("#confirm-appointment-btn").prop("disabled", false).text("💳 Ödeme Yap ve Randevuyu Onayla")
     })
   }
 })(window.jQuery)
