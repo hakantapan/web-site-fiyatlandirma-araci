@@ -641,12 +641,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999; /* z-index'i artırdık */
+  z-index: 9999;
   backdrop-filter: blur(4px);
 }
 
 .modal.hidden {
-  display: none !important; /* !important ekledik */
+  display: none !important;
 }
 
 .modal-content {
@@ -812,6 +812,7 @@
   font-size: 1.6rem;
   font-weight: 500;
   background: #ffffff;
+  position: relative;
 }
 
 .dark-mode .time-slot {
@@ -820,7 +821,7 @@
   color: #f8fafc;
 }
 
-.time-slot:hover {
+.time-slot:hover:not(.disabled) {
   border-color: #00ff00;
   transform: translateY(-1px);
 }
@@ -831,6 +832,50 @@
   border-color: #00ff00;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.time-slot.disabled {
+  background: #f1f5f9;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dark-mode .time-slot.disabled {
+  background: #374151;
+  color: #6b7280;
+  border-color: #4b5563;
+}
+
+.booked-indicator {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 20px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.dark-mode .loading,
+.dark-mode .error {
+  color: #94a3b8;
+}
+
+.error {
+  color: #ef4444;
+}
+
+.dark-mode .error {
+  color: #f87171;
 }
 
 /* Responsive Design */

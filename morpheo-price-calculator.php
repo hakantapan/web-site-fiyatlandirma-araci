@@ -27,6 +27,10 @@ class MorpheoCalculator {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('wp_ajax_save_calculator_data', array($this, 'save_calculator_data'));
         add_action('wp_ajax_nopriv_save_calculator_data', array($this, 'save_calculator_data'));
+        add_action('wp_ajax_get_available_time_slots', array($this, 'get_available_time_slots'));
+        add_action('wp_ajax_nopriv_get_available_time_slots', array($this, 'get_available_time_slots'));
+        add_action('wp_ajax_book_appointment', array($this, 'book_appointment'));
+        add_action('wp_ajax_nopriv_book_appointment', array($this, 'book_appointment'));
         
         // Admin hooks
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -64,6 +68,11 @@ class MorpheoCalculator {
         if (strpos($hook, 'morpheo-calculator') !== false) {
             wp_enqueue_script('morpheo-admin-js', MORPHEO_CALC_PLUGIN_URL . 'assets/admin.js', array('jquery'), MORPHEO_CALC_VERSION, true);
             wp_enqueue_style('morpheo-admin-css', MORPHEO_CALC_PLUGIN_URL . 'assets/admin.css', array(), MORPHEO_CALC_VERSION);
+            
+            wp_localize_script('morpheo-admin-js', 'morpheo_admin', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('morpheo_admin_nonce')
+            ));
         }
     }
 
@@ -169,6 +178,81 @@ class MorpheoCalculator {
         }
     }
     
+    public function get_available_time_slots() {
+        check_ajax_referer('morpheo_calculator_nonce', 'nonce');
+        
+        $date = sanitize_text_field($_POST['date']);
+        
+        if (!$date) {
+            wp_send_json_error(array('message' => 'Date is required'));
+        }
+        
+        global $wpdb;
+        $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
+        
+        // Get booked time slots for the selected date
+        $booked_slots = $wpdb->get_col($wpdb->prepare(
+            "SELECT appointment_time FROM $appointments_table 
+             WHERE appointment_date = %s 
+             AND payment_status IN ('paid', 'confirmed', 'pending')",
+            $date
+        ));
+        
+        // Convert to simple time format (HH:MM)
+        $booked_times = array();
+        foreach ($booked_slots as $slot) {
+            $booked_times[] = date('H:i', strtotime($slot));
+        }
+        
+        wp_send_json_success(array('booked_slots' => $booked_times));
+    }
+    
+    public function book_appointment() {
+        check_ajax_referer('morpheo_calculator_nonce', 'nonce');
+        
+        global $wpdb;
+        
+        $calculator_id = intval($_POST['calculator_id']);
+        $appointment_date = sanitize_text_field($_POST['appointment_date']);
+        $appointment_time = sanitize_text_field($_POST['appointment_time']);
+        $consultation_fee = get_option('morpheo_consultation_fee', '250');
+        
+        // Check if the time slot is still available
+        $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $appointments_table 
+             WHERE appointment_date = %s 
+             AND appointment_time = %s 
+             AND payment_status IN ('paid', 'confirmed', 'pending')",
+            $appointment_date,
+            $appointment_time
+        ));
+        
+        if ($existing) {
+            wp_send_json_error(array('message' => 'Bu saat dilimi artık müsait değil. Lütfen başka bir saat seçin.'));
+        }
+        
+        // Book the appointment
+        $data = array(
+            'calculator_id' => $calculator_id,
+            'appointment_date' => $appointment_date,
+            'appointment_time' => $appointment_time,
+            'payment_status' => 'pending',
+            'payment_amount' => floatval($consultation_fee),
+            'created_at' => current_time('mysql')
+        );
+        
+        $result = $wpdb->insert($appointments_table, $data);
+        
+        if ($result) {
+            wp_send_json_success(array(
+                'message' => 'Appointment booked successfully',
+                'appointment_id' => $wpdb->insert_id
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'Failed to book appointment'));
+        }
+    }
     
     public function admin_page() {
         include MORPHEO_CALC_PLUGIN_PATH . 'admin/admin-page.php';
@@ -233,8 +317,11 @@ class MorpheoCalculator {
             appointment_time time,
             payment_status varchar(20) DEFAULT 'pending',
             payment_amount decimal(10,2) DEFAULT 250.00,
+            notes text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
+            UNIQUE KEY unique_appointment (appointment_date, appointment_time),
             FOREIGN KEY (calculator_id) REFERENCES $table_name(id)
         ) $charset_collate;";
         
