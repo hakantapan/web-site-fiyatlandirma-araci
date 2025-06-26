@@ -11,10 +11,10 @@
         <div class="header-icon">
             <span>🌐</span>
         </div>
-        <h1>Morpheo Dijital Website Fiyatlandırma Aracı</h1>
-        <p>Profesyonel web sitesi projeleriniz için anında fiyat teklifi alın</p>
+        <h1>Web Sitenizi Birlikte Planlayalım</h1>
+        <p>Size en uygun web sitesi türünü ve fiyatını birlikte belirleyelim</p>
         <div class="warning">
-            <strong>Bilgi:</strong> Bu araç tahmini fiyatlandırma sağlar. Kesin fiyat için detaylı görüşme gereklidir.
+            <strong>💡 Bilgi:</strong> Sorularımız sizi doğru çözüme yönlendirecek. Teknik bilgi gerekmez!
         </div>
     </div>
 
@@ -24,268 +24,475 @@
             <div class="progress-fill" id="progress-fill"></div>
         </div>
         <div class="progress-info">
-            <span id="current-step">Adım 1 / 5</span>
-            <span id="progress-percent">20% Tamamlandı</span>
+            <span id="current-step">Adım 1 / 6</span>
+            <span id="progress-percent">17% Tamamlandı</span>
         </div>
     </div>
 
     <!-- Calculator Card -->
     <div class="calculator-card">
         <div class="card-header">
-            <h2 id="step-title">Adım 1: Projenin Temelleri</h2>
-            <p id="step-description">Web sitenizin türünü ve sayfa sayısını belirleyin</p>
+            <h2 id="step-title">Adım 1: Web Sitenizin Amacı Nedir?</h2>
+            <p id="step-description">Web sitenizle ne yapmak istediğinizi anlayalım</p>
         </div>
 
         <div class="card-content">
-            <!-- Step 1: Website Type & Page Count -->
+            <!-- Step 1: Purpose Analysis -->
             <div class="step-content" id="step-1">
                 <div class="form-group">
-                    <label class="form-label">Web Sitesi Türü</label>
-                    <div class="website-types-grid">
-                        <div class="website-type-option" data-type="corporate">
-                            <span class="type-icon">🏢</span>
-                            <span class="type-name">Kurumsal Website</span>
+                    <label class="form-label">Web sitenizle hangi amacı gerçekleştirmek istiyorsunuz?</label>
+                    <div class="purpose-options">
+                        <div class="purpose-option" data-purpose="sell-products">
+                            <div class="purpose-icon">🛒</div>
+                            <div class="purpose-content">
+                                <h3>Ürün/Hizmet Satmak</h3>
+                                <p>Online mağaza açıp ürünlerinizi satmak istiyorum</p>
+                                <div class="purpose-examples">
+                                    <span>Örnek: Trendyol, GittiGidiyor, kendi mağazanız</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="website-type-option" data-type="ecommerce">
-                            <span class="type-icon">🛒</span>
-                            <span class="type-name">E-Ticaret</span>
+                        
+                        <div class="purpose-option" data-purpose="showcase-business">
+                            <div class="purpose-icon">🏢</div>
+                            <div class="purpose-content">
+                                <h3>İşimi Tanıtmak</h3>
+                                <p>Şirketimi, hizmetlerimi tanıtıp müşteri çekmek istiyorum</p>
+                                <div class="purpose-examples">
+                                    <span>Örnek: Avukat, doktor, berber, temizlik şirketi siteleri</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="website-type-option" data-type="blog">
-                            <span class="type-icon">📝</span>
-                            <span class="type-name">Blog / Haber</span>
+                        
+                        <div class="purpose-option" data-purpose="share-content">
+                            <div class="purpose-icon">📝</div>
+                            <div class="purpose-content">
+                                <h3>İçerik Paylaşmak</h3>
+                                <p>Blog yazıları, haberler, makaleler paylaşmak istiyorum</p>
+                                <div class="purpose-examples">
+                                    <span>Örnek: Hürriyet, Sabah, kişisel blog siteleri</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="website-type-option" data-type="landing">
-                            <span class="type-icon">🎯</span>
-                            <span class="type-name">Landing Page</span>
+                        
+                        <div class="purpose-option" data-purpose="single-campaign">
+                            <div class="purpose-icon">🎯</div>
+                            <div class="purpose-content">
+                                <h3>Tek Ürün/Kampanya</h3>
+                                <p>Belirli bir ürün, hizmet veya etkinlik için özel sayfa</p>
+                                <div class="purpose-examples">
+                                    <span>Örnek: Kurs satış sayfası, etkinlik duyuru sayfası</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Tahmini Sayfa Sayısı: <span id="page-count-value">5</span></label>
-                    <input type="range" id="page-count-slider" min="1" max="50" value="5" class="slider">
-                    <div class="slider-labels">
-                        <span>1 Sayfa</span>
-                        <span>50+ Sayfa</span>
+                        
+                        <div class="purpose-option" data-purpose="not-sure">
+                            <div class="purpose-icon">🤔</div>
+                            <div class="purpose-content">
+                                <h3>Emin Değilim</h3>
+                                <p>Tam olarak ne istediğimi bilmiyorum, yardım edin</p>
+                                <div class="purpose-examples">
+                                    <span>Size uygun çözümü birlikte bulalım</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div id="step-1-error" class="error-message hidden"></div>
             </div>
 
-            <!-- Step 2: Design & Features -->
+            <!-- Step 2: Business Details -->
             <div class="step-content hidden" id="step-2">
                 <div class="form-group">
-                    <label class="form-label">Tasarım Yaklaşımı</label>
-                    <div class="design-options">
-                        <div class="design-option">
-                            <input type="radio" name="design" value="basic" id="design-basic">
-                            <label for="design-basic">
-                                <div class="option-content">
-                                    <span>Temel Tasarım</span>
-                                    <span class="option-info" title="Hazır WordPress temaları kullanılarak hızlı çözüm. Temel özelleştirmeler, logo entegrasyonu ve renk uyarlaması dahil. 2-3 hafta içinde teslim. Küçük işletmeler ve hızlı başlangıç için ideal.">ℹ️</span>
-                                </div>
-                                <span class="option-price">Ek ücret yok</span>
-                            </label>
+                    <label class="form-label">İşiniz hakkında bize biraz bilgi verin</label>
+                    <div class="business-questions">
+                        <div class="question-card">
+                            <h4>🏪 Ne tür bir işletmeniz var?</h4>
+                            <div class="business-types">
+                                <label class="business-type-option">
+                                    <input type="radio" name="business-type" value="retail">
+                                    <span>Perakende/Mağaza (kıyafet, elektronik, vs.)</span>
+                                </label>
+                                <label class="business-type-option">
+                                    <input type="radio" name="business-type" value="service">
+                                    <span>Hizmet Sektörü (kuaför, temizlik, danışmanlık, vs.)</span>
+                                </label>
+                                <label class="business-type-option">
+                                    <input type="radio" name="business-type" value="restaurant">
+                                    <span>Restoran/Kafe</span>
+                                </label>
+                                <label class="business-type-option">
+                                    <input type="radio" name="business-type" value="healthcare">
+                                    <span>Sağlık (doktor, diş hekimi, vs.)</span>
+                                </label>
+                                <label class="business-type-option">
+                                    <input type="radio" name="business-type" value="education">
+                                    <span>Eğitim/Kurs</span>
+                                </label>
+                                <label class="business-type-option">
+                                    <input type="radio" name="business-type" value="other">
+                                    <span>Diğer</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="design-option">
-                            <input type="radio" name="design" value="custom" id="design-custom">
-                            <label for="design-custom">
-                                <div class="option-content">
-                                    <span>Özel Tasarım</span>
-                                    <span class="option-info" title="Markanıza özel tasarım çalışması. Benzersiz layout, özel grafik tasarımlar, marka kimliğine uygun renk paleti ve tipografi. Responsive tasarım garantisi. Orta ölçekli işletmeler için önerilen seçenek.">ℹ️</span>
-                                </div>
-                                <span class="option-price">+%50 ek ücret</span>
-                            </label>
+                        
+                        <div class="question-card">
+                            <h4>💰 Online ödeme alacak mısınız?</h4>
+                            <div class="yes-no-options">
+                                <label class="yn-option">
+                                    <input type="radio" name="online-payment" value="yes">
+                                    <span class="yn-content">
+                                        <strong>Evet</strong>
+                                        <small>Kredi kartı ile ödeme alacağım</small>
+                                    </span>
+                                </label>
+                                <label class="yn-option">
+                                    <input type="radio" name="online-payment" value="no">
+                                    <span class="yn-content">
+                                        <strong>Hayır</strong>
+                                        <small>Sadece bilgi verip telefon/mail ile iletişim</small>
+                                    </span>
+                                </label>
+                                <label class="yn-option">
+                                    <input type="radio" name="online-payment" value="maybe">
+                                    <span class="yn-content">
+                                        <strong>Belki</strong>
+                                        <small>Şimdilik değil ama ileride ekleyebilirim</small>
+                                    </span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="design-option">
-                            <input type="radio" name="design" value="premium" id="design-premium">
-                            <label for="design-premium">
-                                <div class="option-content">
-                                    <span>Premium Tasarım</span>
-                                    <span class="option-info" title="Tamamen özel, animasyonlu ve interaktif tasarım. Micro-interactions, paralaks efektler, özel animasyonlar, gelişmiş UX/UI tasarımı. A/B test optimizasyonu ve kullanıcı deneyimi analizi dahil. Büyük şirketler ve premium markalar için.">ℹ️</span>
-                                </div>
-                                <span class="option-price">+%100 ek ücret</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Ek Özellikler</label>
-                    <div class="features-list">
-                        <div class="feature-option">
-                            <input type="checkbox" id="seo" value="seo">
-                            <label for="seo">
-                                <div class="option-content">
-                                    <span>SEO Optimizasyonu</span>
-                                    <span class="option-info" title="Kapsamlı arama motoru optimizasyonu: Meta etiketler, yapılandırılmış veri, XML sitemap, robots.txt, sayfa hızı optimizasyonu, mobil uyumluluk, Google Analytics ve Search Console kurulumu. İlk 3 ayda %40-60 organik trafik artışı hedeflenir.">ℹ️</span>
-                                </div>
-                                <span class="feature-price">+3,000 ₺</span>
-                            </label>
-                        </div>
-                        <div class="feature-option">
-                            <input type="checkbox" id="cms" value="cms">
-                            <label for="cms">
-                                <div class="option-content">
-                                    <span>İçerik Yönetim Sistemi</span>
-                                    <span class="option-info" title="Kullanıcı dostu admin paneli ile kolay içerik yönetimi. Sayfa/blog yazısı ekleme, medya yönetimi, menü düzenleme, kullanıcı rolleri ve yetkilendirme sistemi. Eğitim videoları ve 3 aylık teknik destek dahil.">ℹ️</span>
-                                </div>
-                                <span class="feature-price">+5,000 ₺</span>
-                            </label>
-                        </div>
-                        <div class="feature-option">
-                            <input type="checkbox" id="multilang" value="multilang">
-                            <label for="multilang">
-                                <div class="option-content">
-                                    <span>Çoklu Dil Desteği</span>
-                                    <span class="option-info" title="Profesyonel çoklu dil sistemi: Dil değiştirici, URL yapısı optimizasyonu, her dil için ayrı SEO ayarları, otomatik dil algılama, RTL dil desteği. 2 dil kurulumu dahil, ek diller için +500₺/dil.">ℹ️</span>
-                                </div>
-                                <span class="feature-price">+4,000 ₺</span>
-                            </label>
-                        </div>
-                        <div class="feature-option">
-                            <input type="checkbox" id="payment" value="payment">
-                            <label for="payment">
-                                <div class="option-content">
-                                    <span>Ödeme Sistemi Entegrasyonu</span>
-                                    <span class="option-info" title="Güvenli ödeme altyapısı: İyzico, PayTR, Stripe entegrasyonu. Kredi kartı, havale/EFT, kapıda ödeme seçenekleri. SSL sertifikası, PCI DSS uyumluluk, otomatik fatura sistemi ve ödeme raporlama dahil.">ℹ️</span>
-                                </div>
-                                <span class="feature-price">+6,000 ₺</span>
-                            </label>
+                        
+                        <div class="question-card">
+                            <h4>📱 Müşterileriniz nasıl size ulaşıyor?</h4>
+                            <div class="contact-methods">
+                                <label class="contact-option">
+                                    <input type="checkbox" name="contact-method" value="phone">
+                                    <span>📞 Telefon</span>
+                                </label>
+                                <label class="contact-option">
+                                    <input type="checkbox" name="contact-method" value="whatsapp">
+                                    <span>💬 WhatsApp</span>
+                                </label>
+                                <label class="contact-option">
+                                    <input type="checkbox" name="contact-method" value="email">
+                                    <span>📧 E-posta</span>
+                                </label>
+                                <label class="contact-option">
+                                    <input type="checkbox" name="contact-method" value="visit">
+                                    <span>🏪 Mağazaya geliyorlar</span>
+                                </label>
+                                <label class="contact-option">
+                                    <input type="checkbox" name="contact-method" value="social">
+                                    <span>📱 Sosyal medya</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div id="step-2-error" class="error-message hidden"></div>
             </div>
 
-            <!-- Step 3: Technical Features -->
+            <!-- Step 3: Website Recommendation -->
             <div class="step-content hidden" id="step-3">
-                <div class="form-group">
-                    <label class="form-label">Teknik SEO Paketi</label>
-                    <div class="seo-options">
-                        <div class="seo-option">
-                            <input type="radio" name="technical-seo" value="none" id="seo-none">
-                            <label for="seo-none">
-                                <div class="option-content">
-                                    <span>SEO İstemiyorum</span>
-                                    <span class="option-info" title="Hiçbir SEO çalışması yapılmaz. Site arama motorlarında görünmeyebilir. Sadece mevcut müşterilerinizin direkt erişim sağladığı siteler için uygundur. Önerilmez.">ℹ️</span>
-                                </div>
-                            </label>
-                        </div>
-                        <div class="seo-option">
-                            <input type="radio" name="technical-seo" value="basic" id="seo-basic" checked>
-                            <label for="seo-basic">
-                                <div class="option-content">
-                                    <span>Temel SEO Kurulumu</span>
-                                    <span class="option-info" title="Temel SEO gereksinimleri: Title/meta description optimizasyonu, H1-H6 etiket yapısı, alt text'ler, temel XML sitemap, robots.txt, Google Analytics kurulumu. Yerel işletmeler ve küçük siteler için yeterli.">ℹ️</span>
-                                </div>
-                                <span class="option-price">+2,500 ₺</span>
-                            </label>
-                        </div>
-                        <div class="seo-option">
-                            <input type="radio" name="technical-seo" value="advanced" id="seo-advanced">
-                            <label for="seo-advanced">
-                                <div class="option-content">
-                                    <span>Gelişmiş SEO Çalışması</span>
-                                    <span class="option-info" title="Kapsamlı SEO stratejisi: Anahtar kelime araştırması, rakip analizi, teknik SEO audit, sayfa hızı optimizasyonu, yapılandırılmış veri, yerel SEO, backlink stratejisi, 6 aylık SEO takip raporu. Rekabetçi sektörler için şart.">ℹ️</span>
-                                </div>
-                                <span class="option-price">+5,000 ₺</span>
-                            </label>
-                        </div>
+                <div class="recommendation-result">
+                    <div class="recommendation-header">
+                        <h3>🎉 Size Özel Önerimiz Hazır!</h3>
+                        <p>Verdiğiniz cevaplara göre size en uygun çözümü belirledik</p>
                     </div>
-                </div>
-
-                <!-- E-commerce Modules -->
-                <div class="form-group" id="ecommerce-modules" style="display: none;">
-                    <label class="form-label">E-Ticaret Modülleri</label>
-                    <div class="ecommerce-modules-list">
-                        <div class="module-option">
-                            <input type="checkbox" id="inventory" value="inventory">
-                            <label for="inventory">
-                                <div class="option-content">
-                                    <span>Gelişmiş Stok Yönetimi</span>
-                                    <span class="option-info" title="Profesyonel stok takip sistemi: Çoklu depo yönetimi, otomatik stok uyarıları, barkod sistemi, stok hareketleri raporu, minimum stok seviyeleri, tedarikçi yönetimi. Büyük ürün kataloğu olan işletmeler için kritik.">ℹ️</span>
+                    
+                    <div class="recommended-solution" id="recommended-solution">
+                        <!-- Bu alan JavaScript ile doldurulacak -->
+                    </div>
+                    
+                    <div class="alternative-options">
+                        <h4>🔄 Başka seçenekler de görmek ister misiniz?</h4>
+                        <div class="website-types-grid">
+                            <div class="website-type-option" data-type="corporate">
+                                <span class="type-icon">🏢</span>
+                                <div class="type-content">
+                                    <span class="type-name">Kurumsal Website</span>
+                                    <span class="type-description">İşinizi tanıtan, güven veren profesyonel site</span>
                                 </div>
-                                <span class="module-price">+3,500 ₺</span>
-                            </label>
-                        </div>
-                        <div class="module-option">
-                            <input type="checkbox" id="multivendor" value="multivendor">
-                            <label for="multivendor">
-                                <div class="option-content">
-                                    <span>Çoklu Satıcı Sistemi</span>
-                                    <span class="option-info" title="Marketplace platformu: Satıcı kayıt sistemi, komisyon yönetimi, satıcı paneli, ürün onay süreci, ayrı faturalandırma, satıcı performans raporları. Amazon/Trendyol benzeri platform kurmak isteyenler için.">ℹ️</span>
+                            </div>
+                            <div class="website-type-option" data-type="ecommerce">
+                                <span class="type-icon">🛒</span>
+                                <div class="type-content">
+                                    <span class="type-name">E-Ticaret Sitesi</span>
+                                    <span class="type-description">Online mağaza, ürün satışı, ödeme sistemi</span>
                                 </div>
-                                <span class="module-price">+8,000 ₺</span>
-                            </label>
-                        </div>
-                        <div class="module-option">
-                            <input type="checkbox" id="subscription" value="subscription">
-                            <label for="subscription">
-                                <div class="option-content">
-                                    <span>Abonelik Sistemi</span>
-                                    <span class="option-info" title="Tekrarlayan ödeme sistemi: Aylık/yıllık abonelikler, otomatik yenileme, abonelik planları, deneme süreleri, abonelik yönetim paneli, churn analizi. SaaS ürünler ve abonelik modeli işletmeler için.">ℹ️</span>
+                            </div>
+                            <div class="website-type-option" data-type="blog">
+                                <span class="type-icon">📝</span>
+                                <div class="type-content">
+                                    <span class="type-name">Blog/İçerik Sitesi</span>
+                                    <span class="type-description">Makale, haber, içerik paylaşım sitesi</span>
                                 </div>
-                                <span class="module-price">+4,500 ₺</span>
-                            </label>
-                        </div>
-                        <div class="module-option">
-                            <input type="checkbox" id="mobile-app" value="mobile-app">
-                            <label for="mobile-app">
-                                <div class="option-content">
-                                    <span>Mobil Uygulama</span>
-                                    <span class="option-info" title="Native iOS ve Android uygulaması: Push bildirimler, offline çalışma, kamera entegrasyonu, GPS lokasyon, uygulama mağazası yayınlama, 1 yıl güncelleme desteği. Müşteri sadakati artırmak için güçlü araç.">ℹ️</span>
+                            </div>
+                            <div class="website-type-option" data-type="landing">
+                                <span class="type-icon">🎯</span>
+                                <div class="type-content">
+                                    <span class="type-name">Özel Kampanya Sayfası</span>
+                                    <span class="type-description">Tek ürün/hizmet için özel tasarım</span>
                                 </div>
-                                <span class="module-price">+12,000 ₺</span>
-                            </label>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div id="step-3-error" class="error-message hidden"></div>
             </div>
 
-            <!-- Step 4: Timeline -->
+            <!-- Step 4: Content & Size -->
             <div class="step-content hidden" id="step-4">
                 <div class="form-group">
-                    <label class="form-label">Proje Teslim Süresi</label>
-                    <div class="timeline-options">
-                        <div class="timeline-option">
-                            <input type="radio" name="timeline" value="standard" id="timeline-standard">
-                            <label for="timeline-standard">
-                                <div class="option-content">
-                                    <span>Standart (4-6 Hafta)</span>
-                                    <span class="option-info" title="Normal çalışma temposu: Detaylı planlama, kaliteli tasarım süreci, kapsamlı test aşaması, revizyon hakları. En kaliteli sonuç için önerilen süre. Çoğu proje için ideal zaman dilimi.">ℹ️</span>
+                    <label class="form-label">Web sitenizde hangi sayfalar olsun?</label>
+                    <div class="content-planning">
+                        <div class="page-categories">
+                            <div class="page-category">
+                                <h4>📄 Temel Sayfalar (Hepsinde olmalı)</h4>
+                                <div class="page-list basic-pages">
+                                    <div class="page-item checked">
+                                        <span class="page-name">Ana Sayfa</span>
+                                        <span class="page-desc">Sitenizin vitrin sayfası</span>
+                                    </div>
+                                    <div class="page-item checked">
+                                        <span class="page-name">Hakkımızda</span>
+                                        <span class="page-desc">İşinizi tanıtan sayfa</span>
+                                    </div>
+                                    <div class="page-item checked">
+                                        <span class="page-name">İletişim</span>
+                                        <span class="page-desc">Adres, telefon, harita</span>
+                                    </div>
                                 </div>
-                                <span class="option-price">Ek ücret yok</span>
-                            </label>
+                            </div>
+                            
+                            <div class="page-category">
+                                <h4>🛍️ İş Sayfaları</h4>
+                                <div class="page-list business-pages">
+                                    <label class="page-item selectable">
+                                        <input type="checkbox" name="pages" value="services">
+                                        <span class="page-content">
+                                            <span class="page-name">Hizmetlerimiz/Ürünlerimiz</span>
+                                            <span class="page-desc">Ne sattığınızı gösteren sayfa</span>
+                                        </span>
+                                    </label>
+                                    <label class="page-item selectable">
+                                        <input type="checkbox" name="pages" value="gallery">
+                                        <span class="page-content">
+                                            <span class="page-name">Galeri/Portföy</span>
+                                            <span class="page-desc">Çalışmalarınızın fotoğrafları</span>
+                                        </span>
+                                    </label>
+                                    <label class="page-item selectable">
+                                        <input type="checkbox" name="pages" value="team">
+                                        <span class="page-content">
+                                            <span class="page-name">Ekibimiz</span>
+                                            <span class="page-desc">Çalışanlarınızı tanıtan sayfa</span>
+                                        </span>
+                                    </label>
+                                    <label class="page-item selectable">
+                                        <input type="checkbox" name="pages" value="testimonials">
+                                        <span class="page-content">
+                                            <span class="page-name">Müşteri Yorumları</span>
+                                            <span class="page-desc">Memnun müşteri görüşleri</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="page-category">
+                                <h4>📝 İçerik Sayfaları</h4>
+                                <div class="page-list content-pages">
+                                    <label class="page-item selectable">
+                                        <input type="checkbox" name="pages" value="blog">
+                                        <span class="page-content">
+                                            <span class="page-name">Blog/Haberler</span>
+                                            <span class="page-desc">Düzenli içerik paylaşımı</span>
+                                        </span>
+                                    </label>
+                                    <label class="page-item selectable">
+                                        <input type="checkbox" name="pages" value="faq">
+                                        <span class="page-content">
+                                            <span class="page-name">Sık Sorulan Sorular</span>
+                                            <span class="page-desc">Müşteri sorularının cevapları</span>
+                                        </span>
+                                    </label>
+                                    <label class="page-item selectable">
+                                        <input type="checkbox" name="pages" value="career">
+                                        <span class="page-content">
+                                            <span class="page-name">Kariyer/İş İlanları</span>
+                                            <span class="page-desc">Personel alım sayfası</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <div class="timeline-option">
-                            <input type="radio" name="timeline" value="fast" id="timeline-fast">
-                            <label for="timeline-fast">
-                                <div class="option-content">
-                                    <span>Hızlı (2-3 Hafta)</span>
-                                    <span class="option-info" title="Hızlandırılmış süreç: Öncelikli çalışma, ek ekip kaynağı, sınırlı revizyon hakkı. Acil lansmanlar için uygun. Bazı detay çalışmaları kısıtlanabilir.">ℹ️</span>
-                                </div>
-                                <span class="option-price">+%30 ek ücret</span>
-                            </label>
-                        </div>
-                        <div class="timeline-option">
-                            <input type="radio" name="timeline" value="urgent" id="timeline-urgent">
-                            <label for="timeline-urgent">
-                                <div class="option-content">
-                                    <span>Acil (1-2 Hafta)</span>
-                                    <span class="option-info" title="Acil durum süreci: 7/24 çalışma, tüm ekip kaynağı, minimum revizyon. Sadece kritik durumlar için. Ek özellikler sınırlanabilir, temel fonksiyonlara odaklanılır.">ℹ️</span>
-                                </div>
-                                <span class="option-price">+%60 ek ücret</span>
-                            </label>
+                        
+                        <div class="page-counter">
+                            <div class="counter-display">
+                                <span class="counter-label">Toplam Sayfa Sayısı:</span>
+                                <span class="counter-value" id="page-count-display">3</span>
+                            </div>
+                            <div class="counter-note">
+                                <small>💡 Daha fazla sayfa = Daha detaylı site = Daha yüksek fiyat</small>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div id="step-4-error" class="error-message hidden"></div>
             </div>
 
-            <!-- Step 5: Contact Information -->
+            <!-- Step 5: Design & Features -->
             <div class="step-content hidden" id="step-5">
+                <div class="form-group">
+                    <label class="form-label">Sitenizin görünümü nasıl olsun?</label>
+                    <div class="design-approach">
+                        <div class="design-option">
+                            <input type="radio" name="design" value="basic" id="design-basic">
+                            <label for="design-basic">
+                                <div class="design-preview">
+                                    <div class="preview-mockup basic-mockup">
+                                        <div class="mockup-header"></div>
+                                        <div class="mockup-content">
+                                            <div class="mockup-text"></div>
+                                            <div class="mockup-text short"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="design-info">
+                                    <h4>💼 Profesyonel & Sade</h4>
+                                    <p>Temiz, düzenli, işinize odaklı tasarım</p>
+                                    <div class="design-features">
+                                        <span>✓ Hızlı hazırlanır</span>
+                                        <span>✓ Mobil uyumlu</span>
+                                        <span>✓ SEO dostu</span>
+                                    </div>
+                                    <div class="design-price">Ek ücret yok</div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="design-option">
+                            <input type="radio" name="design" value="custom" id="design-custom">
+                            <label for="design-custom">
+                                <div class="design-preview">
+                                    <div class="preview-mockup custom-mockup">
+                                        <div class="mockup-header gradient"></div>
+                                        <div class="mockup-content">
+                                            <div class="mockup-image"></div>
+                                            <div class="mockup-text"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="design-info">
+                                    <h4>🎨 Markanıza Özel</h4>
+                                    <p>Logonuza, renklerinize uygun özel tasarım</p>
+                                    <div class="design-features">
+                                        <span>✓ Marka kimliği</span>
+                                        <span>✓ Özel renkler</span>
+                                        <span>✓ Benzersiz görünüm</span>
+                                    </div>
+                                    <div class="design-price">+%50 ek ücret</div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="design-option">
+                            <input type="radio" name="design" value="premium" id="design-premium">
+                            <label for="design-premium">
+                                <div class="design-preview">
+                                    <div class="preview-mockup premium-mockup">
+                                        <div class="mockup-header animated"></div>
+                                        <div class="mockup-content">
+                                            <div class="mockup-slider"></div>
+                                            <div class="mockup-cards">
+                                                <div class="mockup-card"></div>
+                                                <div class="mockup-card"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="design-info">
+                                    <h4>✨ Lüks & Etkileyici</h4>
+                                    <p>Animasyonlu, modern, göz alıcı tasarım</p>
+                                    <div class="design-features">
+                                        <span>✓ Animasyonlar</span>
+                                        <span>✓ İnteraktif öğeler</span>
+                                        <span>✓ Premium görünüm</span>
+                                    </div>
+                                    <div class="design-price">+%100 ek ücret</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Hangi ek özellikler olsun? (İsteğe bağlı)</label>
+                    <div class="features-grid">
+                        <label class="feature-card">
+                            <input type="checkbox" id="seo" value="seo">
+                            <div class="feature-content">
+                                <div class="feature-icon">🔍</div>
+                                <div class="feature-info">
+                                    <h4>Google'da Çıkmak</h4>
+                                    <p>SEO optimizasyonu ile Google'da üst sıralarda görünün</p>
+                                    <div class="feature-benefit">📈 Daha fazla müşteri</div>
+                                </div>
+                                <div class="feature-price">+3,000 ₺</div>
+                            </div>
+                        </label>
+                        
+                        <label class="feature-card">
+                            <input type="checkbox" id="cms" value="cms">
+                            <div class="feature-content">
+                                <div class="feature-icon">✏️</div>
+                                <div class="feature-info">
+                                    <h4>Kendiniz Güncelleyebilme</h4>
+                                    <p>İçerikleri kendiniz kolayca değiştirebilirsiniz</p>
+                                    <div class="feature-benefit">💰 Güncelleme ücreti yok</div>
+                                </div>
+                                <div class="feature-price">+5,000 ₺</div>
+                            </div>
+                        </label>
+                        
+                        <label class="feature-card">
+                            <input type="checkbox" id="multilang" value="multilang">
+                            <div class="feature-content">
+                                <div class="feature-icon">🌍</div>
+                                <div class="feature-info">
+                                    <h4>Çoklu Dil</h4>
+                                    <p>Türkçe, İngilizce gibi farklı dillerde site</p>
+                                    <div class="feature-benefit">🌐 Uluslararası müşteri</div>
+                                </div>
+                                <div class="feature-price">+4,000 ₺</div>
+                            </div>
+                        </label>
+                        
+                        <label class="feature-card">
+                            <input type="checkbox" id="payment" value="payment">
+                            <div class="feature-content">
+                                <div class="feature-icon">💳</div>
+                                <div class="feature-info">
+                                    <h4>Online Ödeme</h4>
+                                    <p>Kredi kartı ile ödeme alma sistemi</p>
+                                    <div class="feature-benefit">💰 Anında ödeme</div>
+                                </div>
+                                <div class="feature-price">+6,000 ₺</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div id="step-5-error" class="error-message hidden"></div>
+            </div>
+
+            <!-- Step 6: Contact Information -->
+            <div class="step-content hidden" id="step-6">
+                <div class="final-step-header">
+                    <h3>🎯 Son Adım: İletişim Bilgileriniz</h3>
+                    <p>Kişiselleştirilmiş fiyat teklifinizi hazırlayalım</p>
+                </div>
+                
                 <div class="contact-form-grid">
                     <div class="form-group">
                         <label for="first-name">Ad *</label>
@@ -304,15 +511,20 @@
                         <input type="tel" id="phone" required placeholder="0555 123 45 67">
                     </div>
                     <div class="form-group">
-                        <label for="company">Şirket</label>
-                        <input type="text" id="company" placeholder="Şirket adınız (opsiyonel)">
+                        <label for="company">İşletme Adı</label>
+                        <input type="text" id="company" placeholder="İşletmenizin adı (opsiyonel)">
                     </div>
                     <div class="form-group">
                         <label for="city">Şehir</label>
-                        <input type="text" id="city" placeholder="Şehriniz (opsiyonel)">
+                        <input type="text" id="city" placeholder="Hangi şehirdesiniz? (opsiyonel)">
                     </div>
                 </div>
-                <div id="step-5-error" class="error-message hidden"></div>
+                
+                <div class="privacy-notice">
+                    <p><strong>🔒 Gizlilik:</strong> Bilgileriniz sadece size özel teklif hazırlamak için kullanılır. Üçüncü kişilerle paylaşılmaz.</p>
+                </div>
+                
+                <div id="step-6-error" class="error-message hidden"></div>
             </div>
 
             <!-- Navigation Buttons -->
@@ -327,20 +539,30 @@
     <div id="price-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>🎉 Fiyat Hesaplaması Tamamlandı!</h2>
+                <h2>🎉 Kişisel Teklifiniz Hazır!</h2>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="price-result">
+                    <div class="price-summary" id="price-summary">
+                        <!-- JavaScript ile doldurulacak -->
+                    </div>
+                    
                     <div class="price-range">
-                        <span class="price-label">Tahmini Proje Maliyeti:</span>
+                        <span class="price-label">Size Özel Fiyat Aralığı:</span>
                         <span class="price-value" id="price-range"></span>
                     </div>
-                    <div class="price-note">
-                        <strong>📋 Önemli Not:</strong> Bu fiyat aralığı tahminidir ve proje detaylarına göre değişiklik gösterebilir. Kesin fiyat teklifi için detaylı görüşme yapılması gerekmektedir.
+                    
+                    <div class="price-breakdown" id="price-breakdown">
+                        <!-- JavaScript ile doldurulacak -->
                     </div>
+                    
+                    <div class="price-note">
+                        <strong>📋 Önemli:</strong> Bu fiyat, verdiğiniz bilgilere göre hazırlanmış kişisel teklifinizdir. Detaylı görüşmede kesinleştirilecektir.
+                    </div>
+                    
                     <button id="book-appointment-btn" class="btn btn-primary btn-large">
-                        💼 Ücretli Konsültasyon Randevusu Al
+                        💼 Ücretsiz Danışmanlık Randevusu Al
                     </button>
                 </div>
             </div>
@@ -351,17 +573,27 @@
     <div id="appointment-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📅 Ücretli Konsültasyon Randevusu</h2>
+                <h2>📅 Ücretsiz Danışmanlık Randevusu</h2>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="appointment-form">
-                    <div class="consultation-fee-info">
-                        <div class="fee-notice">
-                            <strong>💰 Konsültasyon Ücreti:</strong> <span id="consultation-fee"></span> ₺
-                            <p>Detaylı proje analizi ve özel çözüm önerileri için profesyonel konsültasyon hizmeti.</p>
+                    <div class="consultation-info">
+                        <div class="consultation-benefits">
+                            <h4>🎯 Bu görüşmede neler konuşacağız?</h4>
+                            <ul>
+                                <li>✅ Projenizin detaylarını analiz edeceğiz</li>
+                                <li>✅ Size en uygun çözümü belirleyeceğiz</li>
+                                <li>✅ Kesin fiyat teklifini vereceğiz</li>
+                                <li>✅ Tüm sorularınızı cevaplayacağız</li>
+                                <li>✅ Proje takvimini planlayacağız</li>
+                            </ul>
+                            <div class="consultation-duration">
+                                <strong>⏱️ Süre:</strong> Yaklaşık 30-45 dakika
+                            </div>
                         </div>
                     </div>
+                    
                     <div class="form-group">
                         <label>Randevu Tarihi Seçin</label>
                         <select id="appointment-date">
@@ -376,7 +608,7 @@
                     </div>
                     <div id="appointment-error" class="error-message hidden"></div>
                     <button id="confirm-appointment-btn" class="btn btn-primary btn-large" disabled>
-                        💳 Ödeme Yap ve Randevuyu Onayla
+                        📅 Randevuyu Onayla
                     </button>
                 </div>
             </div>
