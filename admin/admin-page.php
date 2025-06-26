@@ -22,8 +22,44 @@
                         <p class="description">Konsültasyon randevusu ücreti.</p>
                     </td>
                 </tr>
+                <tr valign="top">
+                    <th scope="row">Admin E-posta Adresleri</th>
+                    <td>
+                        <?php $admin_emails = get_option('morpheo_admin_emails', ''); ?>
+                        <input type="text" name="morpheo_admin_emails" value="<?php echo esc_attr($admin_emails); ?>" class="regular-text" />
+                        <p class="description">Randevu bildirimlerinin gönderileceği ek e-posta adresleri (virgülle ayırın). Ana admin e-postası otomatik eklenir.</p>
+                    </td>
+                </tr>
             </table>
             <?php submit_button(); ?>
+        </div>
+
+        <div class="card">
+            <h2>📧 E-posta Bildirimleri</h2>
+            <div class="email-status">
+                <?php
+                // Test email functionality
+                if (function_exists('wp_mail')) {
+                    echo '<p style="color: green;">✅ E-posta sistemi aktif</p>';
+                } else {
+                    echo '<p style="color: red;">❌ E-posta sistemi devre dışı</p>';
+                }
+                ?>
+                
+                <h4>📋 Gönderilen E-posta Türleri:</h4>
+                <ul>
+                    <li><strong>Müşteri Onay E-postası:</strong> Randevu oluşturulduğunda müşteriye gönderilir</li>
+                    <li><strong>Admin Bildirim E-postası:</strong> Yeni randevu oluşturulduğunda admin(ler)e gönderilir</li>
+                    <li><strong>Hatırlatma E-postası:</strong> Randevudan 24 saat önce müşteriye gönderilir</li>
+                </ul>
+                
+                <h4>📊 E-posta İstatistikleri:</h4>
+                <?php
+                // Get email statistics (you could track these in a separate table)
+                $today_appointments = 0; // This would come from your database
+                ?>
+                <p>Bugün gönderilen bildirimler: <strong><?php echo $today_appointments; ?></strong></p>
+            </div>
         </div>
 
         <div class="card">

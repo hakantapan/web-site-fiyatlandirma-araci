@@ -4,7 +4,7 @@
  * Plugin URI: https://morpheodijital.com
  * GitHub Plugin URI: https://github.com/hakantapan/web-site-fiyatlandirma-araci
  * Description: Professional website price calculator with dark mode, e-commerce modules, and appointment booking
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: Morpheo Dijital
  * License: GPL v2 or later
  * Text Domain: morpheo-calculator
@@ -16,9 +16,13 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MORPHEO_CALC_VERSION', '2.0.0');
+define('MORPHEO_CALC_VERSION', '2.1.0');
 define('MORPHEO_CALC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
+
+// Include required files
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-templates.php';
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-sender.php';
 
 class MorpheoCalculator {
     
@@ -40,6 +44,12 @@ class MorpheoCalculator {
         // Activation/Deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+        
+        // Schedule reminder emails
+        add_action('morpheo_send_appointment_reminders', array($this, 'send_appointment_reminders'));
+        if (!wp_next_scheduled('morpheo_send_appointment_reminders')) {
+            wp_schedule_event(time(), 'daily', 'morpheo_send_appointment_reminders');
+        }
     }
     
     public function init() {
@@ -92,6 +102,12 @@ class MorpheoCalculator {
             'type' => 'string',
             'sanitize_callback' => 'sanitize_text_field',
             'default' => '250'
+        ));
+        
+        register_setting('morpheo_calculator_options', 'morpheo_admin_emails', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
         ));
     }
     
@@ -245,12 +261,75 @@ class MorpheoCalculator {
         $result = $wpdb->insert($appointments_table, $data);
         
         if ($result) {
+            $appointment_id = $wpdb->insert_id;
+            
+            // Get calculator data for emails
+            $results_table = $wpdb->prefix . 'morpheo_calculator_results';
+            $calculator_data = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $results_table WHERE id = %d",
+                $calculator_id
+            ));
+            
+            if ($calculator_data) {
+                // Send emails
+                $appointment_data = array(
+                    'appointment_id' => $appointment_id,
+                    'appointment_date' => $appointment_date,
+                    'appointment_time' => $appointment_time
+                );
+                
+                // Send customer confirmation email
+                MorpheoEmailSender::sendCustomerConfirmation($appointment_data, $calculator_data);
+                
+                // Send admin notification email
+                MorpheoEmailSender::sendAdminNotification($appointment_data, $calculator_data);
+            }
+            
             wp_send_json_success(array(
                 'message' => 'Appointment booked successfully',
-                'appointment_id' => $wpdb->insert_id
+                'appointment_id' => $appointment_id
             ));
         } else {
             wp_send_json_error(array('message' => 'Failed to book appointment'));
+        }
+    }
+    
+    public function send_appointment_reminders() {
+        global $wpdb;
+        
+        $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
+        $results_table = $wpdb->prefix . 'morpheo_calculator_results';
+        
+        // Get appointments for tomorrow
+        $tomorrow = date('Y-m-d', strtotime('+1 day'));
+        
+        $appointments = $wpdb->get_results($wpdb->prepare(
+            "SELECT a.*, r.* FROM $appointments_table a 
+             LEFT JOIN $results_table r ON a.calculator_id = r.id 
+             WHERE a.appointment_date = %s 
+             AND a.payment_status IN ('paid', 'confirmed')
+             AND a.reminder_sent = 0",
+            $tomorrow
+        ));
+        
+        foreach ($appointments as $appointment) {
+            $appointment_data = array(
+                'appointment_date' => $appointment->appointment_date,
+                'appointment_time' => $appointment->appointment_time
+            );
+            
+            $sent = MorpheoEmailSender::sendAppointmentReminder($appointment_data, $appointment);
+            
+            if ($sent) {
+                // Mark reminder as sent
+                $wpdb->update(
+                    $appointments_table,
+                    array('reminder_sent' => 1),
+                    array('id' => $appointment->id),
+                    array('%d'),
+                    array('%d')
+                );
+            }
         }
     }
     
@@ -275,6 +354,7 @@ class MorpheoCalculator {
     }
     
     public function deactivate() {
+        wp_clear_scheduled_hook('morpheo_send_appointment_reminders');
         flush_rewrite_rules();
     }
     
@@ -317,6 +397,7 @@ class MorpheoCalculator {
             appointment_time time,
             payment_status varchar(20) DEFAULT 'pending',
             payment_amount decimal(10,2) DEFAULT 250.00,
+            reminder_sent tinyint(1) DEFAULT 0,
             notes text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
