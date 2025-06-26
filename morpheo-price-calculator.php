@@ -4,7 +4,7 @@
  * Plugin URI: https://morpheodijital.com
  * GitHub Plugin URI: https://github.com/hakantapan/web-site-fiyatlandirma-araci
  * Description: Professional website price calculator with dark mode, e-commerce modules, and appointment booking
- * Version: 2.1.0
+ * Version: 2.2.0
  * Author: Morpheo Dijital
  * License: GPL v2 or later
  * Text Domain: morpheo-calculator
@@ -16,14 +16,14 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MORPHEO_CALC_VERSION', '2.1.0');
+define('MORPHEO_CALC_VERSION', '2.2.0');
 define('MORPHEO_CALC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
 // Include required files
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-templates.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-sender.php';
-require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-reminder.php';
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-api.php';
 
 class MorpheoCalculator {
     
@@ -52,10 +52,16 @@ class MorpheoCalculator {
             wp_schedule_event(time(), 'daily', 'morpheo_send_appointment_reminders');
         }
         
-        // Schedule payment reminders (every 5 minutes)
-        add_action('morpheo_check_pending_payments', array('MorpheoPaymentReminder', 'checkPendingPayments'));
-        if (!wp_next_scheduled('morpheo_check_pending_payments')) {
-            wp_schedule_event(time(), 'morpheo_5min', 'morpheo_check_pending_payments');
+        // Schedule payment checks (every 10 minutes)
+        add_action('morpheo_check_payments', array('MorpheoPaymentAPI', 'checkAllPendingPayments'));
+        if (!wp_next_scheduled('morpheo_check_payments')) {
+            wp_schedule_event(time(), 'morpheo_10min', 'morpheo_check_payments');
+        }
+        
+        // Schedule expired appointment cleanup (daily)
+        add_action('morpheo_cleanup_expired', array('MorpheoPaymentAPI', 'cancelExpiredAppointments'));
+        if (!wp_next_scheduled('morpheo_cleanup_expired')) {
+            wp_schedule_event(time(), 'daily', 'morpheo_cleanup_expired');
         }
     }
     
@@ -63,7 +69,7 @@ class MorpheoCalculator {
         // Add shortcode
         add_shortcode('morpheo_web_calculator', array($this, 'calculator_shortcode'));
         
-        // Add custom cron interval
+        // Add custom cron intervals
         add_filter('cron_schedules', array($this, 'add_cron_intervals'));
         
         // Load text domain
@@ -79,7 +85,7 @@ class MorpheoCalculator {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('morpheo_calculator_nonce'),
             'booking_url' => esc_url(get_option('morpheo_booking_url', home_url('/iletisim'))),
-            'woocommerce_url' => esc_url(get_option('morpheo_woocommerce_url', 'https://odeme.morpheodijital.com/konsultasyon')),
+            'woocommerce_url' => 'https://morpheodijital.com/satis/',
             'consultation_fee' => get_option('morpheo_consultation_fee', '250')
         ));
     }
@@ -101,11 +107,6 @@ class MorpheoCalculator {
             'type' => 'string',
             'sanitize_callback' => 'esc_url_raw',
             'default' => home_url('/iletisim')
-        ));
-        register_setting('morpheo_calculator_options', 'morpheo_woocommerce_url', array(
-            'type' => 'string',
-            'sanitize_callback' => 'esc_url_raw',
-            'default' => 'https://odeme.morpheodijital.com/konsultasyon'
         ));
         
         register_setting('morpheo_calculator_options', 'morpheo_consultation_fee', array(
@@ -148,6 +149,15 @@ class MorpheoCalculator {
             'manage_options',
             'morpheo-calculator-appointments',
             array($this, 'appointments_page')
+        );
+        
+        add_submenu_page(
+            'morpheo-calculator',
+            'Payment Status',
+            'Payment Status',
+            'manage_options',
+            'morpheo-calculator-payments',
+            array($this, 'payments_page')
         );
     }
     
@@ -195,11 +205,7 @@ class MorpheoCalculator {
             wp_send_json_success(array('message' => 'Data saved successfully', 'id' => $wpdb->insert_id));
         } else {
             $error_message = $wpdb->last_error;
-            if (function_exists('wp_log_error')) {
-                wp_log_error('Morpheo Calculator insert failed: ' . $error_message);
-            } else {
-                error_log('Morpheo Calculator insert failed: ' . $error_message);
-            }
+            error_log('Morpheo Calculator insert failed: ' . $error_message);
             wp_send_json_error(array('message' => 'Failed to save data', 'error' => $error_message));
         }
     }
@@ -281,10 +287,8 @@ class MorpheoCalculator {
             ));
             
             if ($calculator_data) {
-                // Create payment URL with appointment details
-                $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://odeme.morpheodijital.com/konsultasyon');
-                
-                $payment_params = array(
+                // Create payment URL for Morpheo Dijital sales site
+                $payment_url = 'https://morpheodijital.com/satis/?' . http_build_query(array(
                     'randevu_tarihi' => $appointment_date,
                     'randevu_saati' => $appointment_time,
                     'musteri_adi' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
@@ -293,11 +297,9 @@ class MorpheoCalculator {
                     'proje_tipi' => $calculator_data->website_type,
                     'calculator_id' => $calculator_id,
                     'appointment_id' => $appointment_id,
-                    'ucret' => $consultation_fee
-                );
-                
-                $separator = strpos($woocommerce_url, '?') !== false ? '&' : '?';
-                $payment_url = $woocommerce_url . $separator . http_build_query($payment_params);
+                    'ucret' => $consultation_fee,
+                    'urun' => 'web-site-konsultasyon'
+                ));
                 
                 // Send emails with payment URL
                 $appointment_data = array(
@@ -374,6 +376,10 @@ class MorpheoCalculator {
         include MORPHEO_CALC_PLUGIN_PATH . 'admin/appointments-page.php';
     }
     
+    public function payments_page() {
+        include MORPHEO_CALC_PLUGIN_PATH . 'admin/payments-page.php';
+    }
+    
     public function activate() {
         $this->create_tables();
         if (get_option('morpheo_booking_url') === false) {
@@ -384,7 +390,8 @@ class MorpheoCalculator {
     
     public function deactivate() {
         wp_clear_scheduled_hook('morpheo_send_appointment_reminders');
-        wp_clear_scheduled_hook('morpheo_check_pending_payments');
+        wp_clear_scheduled_hook('morpheo_check_payments');
+        wp_clear_scheduled_hook('morpheo_cleanup_expired');
         flush_rewrite_rules();
     }
     
@@ -442,9 +449,9 @@ class MorpheoCalculator {
     }
 
     public function add_cron_intervals($schedules) {
-        $schedules['morpheo_5min'] = array(
-            'interval' => 300, // 5 minutes
-            'display' => 'Every 5 Minutes'
+        $schedules['morpheo_10min'] = array(
+            'interval' => 600, // 10 minutes
+            'display' => 'Every 10 Minutes'
         );
         return $schedules;
     }

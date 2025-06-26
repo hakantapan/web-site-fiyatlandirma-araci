@@ -105,68 +105,6 @@ class MorpheoEmailSender {
         
         return $sent;
     }
-
-    /**
-     * Send appointment notification email to admin with payment info
-     */
-    public static function sendAdminNotificationWithPayment($appointment_data, $calculator_data, $payment_url = '') {
-        // Prepare email data
-        $email_data = array(
-            'customer_name' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
-            'phone' => $calculator_data->phone,
-            'email' => $calculator_data->email,
-            'company' => $calculator_data->company,
-            'city' => $calculator_data->city,
-            'appointment_date' => $appointment_data['appointment_date'],
-            'appointment_time' => $appointment_data['appointment_time'],
-            'project_type' => self::getProjectTypeName($calculator_data->website_type),
-            'estimated_price' => number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺',
-            'page_count' => $calculator_data->page_count,
-            'design_level' => self::getDesignLevelName($calculator_data->design_complexity),
-            'business_type' => self::getBusinessTypeName($calculator_data->management_features),
-            'online_payment' => self::getOnlinePaymentStatus($calculator_data->ecommerce_modules),
-            'selected_features' => self::getSelectedFeatures($calculator_data->features)
-        );
-
-        // Mevcut email_data array'ine payment bilgisi ekleyin
-        $email_data['payment_url'] = $payment_url;
-        $email_data['payment_status'] = !empty($payment_url) ? 'ÖDEME BEKLENİYOR' : 'ÖDENDİ';
-        $email_data['urgency_level'] = !empty($payment_url) ? 'YÜKSEK' : 'NORMAL';
-        
-        // Admin email
-        $admin_email = get_option('admin_email');
-        $additional_emails = get_option('morpheo_admin_emails', '');
-        
-        $to = array($admin_email);
-        if (!empty($additional_emails)) {
-            $additional = array_map('trim', explode(',', $additional_emails));
-            $to = array_merge($to, $additional);
-        }
-        
-        $subject = '🚨 YENİ RANDEVU: ' . $calculator_data->first_name . ' ' . $calculator_data->last_name . ' - ' . date('d.m.Y H:i', strtotime($appointment_data['appointment_date'] . ' ' . $appointment_data['appointment_time']));
-        $message = MorpheoEmailTemplates::getAdminNotificationEmail($email_data);
-        $headers = array(
-            'Content-Type: text/html; charset=UTF-8',
-            'From: Morpheo Calculator <noreply@morpheodijital.com>',
-            'Reply-To: ' . $calculator_data->email
-        );
-        
-        // Send email to all admins
-        $sent = true;
-        foreach ($to as $admin_email_addr) {
-            $result = wp_mail($admin_email_addr, $subject, $message, $headers);
-            if (!$result) {
-                $sent = false;
-                error_log('Morpheo Calculator: Failed to send admin notification to ' . $admin_email_addr);
-            }
-        }
-        
-        if ($sent) {
-            error_log('Morpheo Calculator: Admin notification emails sent successfully');
-        }
-        
-        return $sent;
-    }
     
     /**
      * Send appointment reminder email (24 hours before)
@@ -216,12 +154,10 @@ class MorpheoEmailSender {
     }
     
     private static function getBusinessTypeName($features) {
-        // This would need to be extracted from the form data
         return 'Belirtilmemiş';
     }
     
     private static function getOnlinePaymentStatus($modules) {
-        // This would need to be extracted from the form data
         return 'Belirtilmemiş';
     }
     
