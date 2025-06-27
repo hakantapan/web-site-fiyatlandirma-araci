@@ -18,6 +18,15 @@
         if (isset($_POST['morpheo_admin_emails'])) {
             update_option('morpheo_admin_emails', sanitize_text_field($_POST['morpheo_admin_emails']));
         }
+
+        // Update WhatsApp settings
+        update_option('morpheo_whatsapp_enable', isset($_POST['morpheo_whatsapp_enable']) ? 'yes' : 'no');
+        if (isset($_POST['morpheo_whatsapp_api_token'])) {
+            update_option('morpheo_whatsapp_api_token', sanitize_text_field($_POST['morpheo_whatsapp_api_token']));
+        }
+        if (isset($_POST['morpheo_whatsapp_from_number'])) {
+            update_option('morpheo_whatsapp_from_number', sanitize_text_field($_POST['morpheo_whatsapp_from_number']));
+        }
         
         echo '<div class="notice notice-success is-dismissible"><p>Ayarlar başarıyla kaydedildi!</p></div>';
     }
@@ -56,6 +65,42 @@
                 </tr>
             </table>
             
+            <p class="submit">
+                <input type="submit" name="submit" class="button-primary" value="Ayarları Kaydet" />
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>WhatsApp Entegrasyonu Ayarları</h2>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">WhatsApp Entegrasyonunu Etkinleştir</th>
+                    <td>
+                        <?php $whatsapp_enable = get_option('morpheo_whatsapp_enable', 'no'); ?>
+                        <label for="morpheo_whatsapp_enable">
+                            <input type="checkbox" id="morpheo_whatsapp_enable" name="morpheo_whatsapp_enable" value="yes" <?php checked('yes', $whatsapp_enable); ?> />
+                            WhatsApp bildirimlerini gönder
+                        </label>
+                        <p class="description">Bu seçeneği işaretleyerek WhatsApp mesajlaşma entegrasyonunu etkinleştirin.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">WhatsApp API Token</th>
+                    <td>
+                        <?php $whatsapp_api_token = get_option('morpheo_whatsapp_api_token', ''); ?>
+                        <input type="text" name="morpheo_whatsapp_api_token" value="<?php echo esc_attr($whatsapp_api_token); ?>" class="regular-text" style="width: 100%; max-width: 600px;" />
+                        <p class="description">OtomatikBot.com API'nizden aldığınız token.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">WhatsApp Gönderen Numara</th>
+                    <td>
+                        <?php $whatsapp_from_number = get_option('morpheo_whatsapp_from_number', ''); ?>
+                        <input type="text" name="morpheo_whatsapp_from_number" value="<?php echo esc_attr($whatsapp_from_number); ?>" class="regular-text" placeholder="Örn: 905XXXXXXXXX" />
+                        <p class="description">Mesajların gönderileceği WhatsApp numaranız (ülke kodu ile birlikte, örn: 905XXXXXXXXX).</p>
+                    </td>
+                </tr>
+            </table>
             <p class="submit">
                 <input type="submit" name="submit" class="button-primary" value="Ayarları Kaydet" />
             </p>
@@ -160,6 +205,24 @@
                         echo '<em>Ek admin e-postası ayarlanmamış</em>';
                     }
                     ?>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">WhatsApp API Token:</th>
+                <td>
+                    <code><?php echo esc_html(get_option('morpheo_whatsapp_api_token', 'Ayarlanmamış')); ?></code>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">WhatsApp Gönderen Numara:</th>
+                <td>
+                    <code><?php echo esc_html(get_option('morpheo_whatsapp_from_number', 'Ayarlanmamış')); ?></code>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">WhatsApp Entegrasyonu:</th>
+                <td>
+                    <strong><?php echo (get_option('morpheo_whatsapp_enable', 'no') === 'yes') ? 'Aktif ✅' : 'Devre Dışı ❌'; ?></strong>
                 </td>
             </tr>
         </table>

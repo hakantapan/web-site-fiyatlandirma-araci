@@ -24,6 +24,8 @@ define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-templates.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-sender.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-api.php';
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-reminder.php'; // Ensure this is included for getMinutesLeft
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/whatsapp-sender.php'; // New WhatsApp sender
 
 class MorpheoCalculator {
     
@@ -121,6 +123,23 @@ class MorpheoCalculator {
         ));
         
         register_setting('morpheo_calculator_options', 'morpheo_admin_emails', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+
+        // New WhatsApp settings
+        register_setting('morpheo_calculator_options', 'morpheo_whatsapp_enable', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => 'no'
+        ));
+        register_setting('morpheo_calculator_options', 'morpheo_whatsapp_api_token', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        register_setting('morpheo_calculator_options', 'morpheo_whatsapp_from_number', array(
             'type' => 'string',
             'sanitize_callback' => 'sanitize_text_field',
             'default' => ''
@@ -284,7 +303,7 @@ class MorpheoCalculator {
         if ($result) {
             $appointment_id = $wpdb->insert_id;
             
-            // Get calculator data for emails
+            // Get calculator data for emails and WhatsApp
             $results_table = $wpdb->prefix . 'morpheo_calculator_results';
             $calculator_data = $wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM $results_table WHERE id = %d",
@@ -306,18 +325,24 @@ class MorpheoCalculator {
                     'urun' => 'web-site-konsultasyon'
                 ));
                 
-                // Send emails with payment URL
+                // Prepare appointment data
                 $appointment_data = array(
                     'appointment_id' => $appointment_id,
                     'appointment_date' => $appointment_date,
                     'appointment_time' => $appointment_time
                 );
-                
+
                 // Send customer confirmation email with payment link
                 MorpheoEmailSender::sendCustomerConfirmation($appointment_data, $calculator_data, $payment_url);
                 
                 // Send admin notification email
                 MorpheoEmailSender::sendAdminNotification($appointment_data, $calculator_data);
+
+                // Send customer confirmation WhatsApp message
+                MorpheoWhatsAppSender::sendCustomerConfirmationWhatsApp($appointment_data, $calculator_data, $payment_url);
+
+                // Send admin notification WhatsApp message
+                MorpheoWhatsAppSender::sendAdminNotificationWhatsApp($appointment_data, $calculator_data);
             }
             
             wp_send_json_success(array(
@@ -366,6 +391,20 @@ class MorpheoCalculator {
             );
             
             if ($update_result) {
+                // Get calculator data for WhatsApp
+                $results_table = $wpdb->prefix . 'morpheo_calculator_results';
+                $calculator_data = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM $results_table WHERE email = %s",
+                    $email
+                ));
+                if ($calculator_data) {
+                    $appointment_obj = $wpdb->get_row($wpdb->prepare(
+                        "SELECT * FROM $appointments_table WHERE id = %d",
+                        $appointment_id
+                    ));
+                    MorpheoWhatsAppSender::sendPaymentConfirmationWhatsApp($appointment_obj, $calculator_data);
+                }
+
                 wp_send_json_success(array(
                     'message' => 'Ödeme doğrulandı! Randevu durumu güncellendi.',
                     'payment_info' => $payment_status
@@ -768,10 +807,11 @@ class MorpheoCalculator {
                 'appointment_time' => $appointment->appointment_time
             );
             
-            $sent = MorpheoEmailSender::sendAppointmentReminder($appointment_data, $appointment);
+            $sent_email = MorpheoEmailSender::sendAppointmentReminder($appointment_data, $appointment);
+            $sent_whatsapp = MorpheoWhatsAppSender::sendAppointmentReminderWhatsApp($appointment_data, $appointment);
             
-            if ($sent) {
-                // Mark reminder as sent
+            if ($sent_email || $sent_whatsapp) {
+                // Mark reminder as sent if either email or WhatsApp was successful
                 $wpdb->update(
                     $appointments_table,
                     array('reminder_sent' => 1),

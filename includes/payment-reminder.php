@@ -28,7 +28,12 @@ class MorpheoPaymentReminder {
             'From: Morpheo Dijital <info@morpheodijital.com>'
         );
         
-        return wp_mail($to, $subject, $message, $headers);
+        $sent_email = wp_mail($to, $subject, $message, $headers);
+
+        // Send WhatsApp reminder
+        MorpheoWhatsAppSender::sendPaymentReminderWhatsApp($appointment_data, $calculator_data, $payment_url);
+
+        return $sent_email;
     }
     
     /**
@@ -119,7 +124,7 @@ class MorpheoPaymentReminder {
     /**
      * Calculate minutes left for payment
      */
-    private static function getMinutesLeft($created_at) {
+    public static function getMinutesLeft($created_at) {
         $created_time = strtotime($created_at);
         $deadline = $created_time + (15 * 60); // 15 minutes
         $now = time();
@@ -149,7 +154,7 @@ class MorpheoPaymentReminder {
         
         foreach ($pending_appointments as $appointment) {
             // Create payment URL
-            $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://odeme.morpheodijital.com/konsultasyon');
+            $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu');
             $payment_params = array(
                 'appointment_id' => $appointment->id,
                 'calculator_id' => $appointment->calculator_id,
