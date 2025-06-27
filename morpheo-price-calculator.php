@@ -40,6 +40,7 @@ class MorpheoCalculator {
         // Admin AJAX hooks
         add_action('wp_ajax_check_single_payment', array($this, 'ajax_check_single_payment'));
         add_action('wp_ajax_get_api_response', array($this, 'ajax_get_api_response'));
+        add_action('wp_ajax_get_morpheo_result_details', array($this, 'ajax_get_result_details'));
         
         // Admin hooks
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -107,24 +108,24 @@ class MorpheoCalculator {
     }
 
     public function register_settings() {
-    register_setting('morpheo_calculator_options', 'morpheo_woocommerce_url', array(
-        'type' => 'string',
-        'sanitize_callback' => 'esc_url_raw',
-        'default' => 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu'
-    ));
-    
-    register_setting('morpheo_calculator_options', 'morpheo_consultation_fee', array(
-        'type' => 'string',
-        'sanitize_callback' => 'sanitize_text_field',
-        'default' => '250'
-    ));
-    
-    register_setting('morpheo_calculator_options', 'morpheo_admin_emails', array(
-        'type' => 'string',
-        'sanitize_callback' => 'sanitize_text_field',
-        'default' => ''
-    ));
-}
+        register_setting('morpheo_calculator_options', 'morpheo_woocommerce_url', array(
+            'type' => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default' => 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu'
+        ));
+        
+        register_setting('morpheo_calculator_options', 'morpheo_consultation_fee', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => '250'
+        ));
+        
+        register_setting('morpheo_calculator_options', 'morpheo_admin_emails', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+    }
     
     public function add_admin_menu() {
         add_menu_page(
@@ -417,6 +418,330 @@ class MorpheoCalculator {
             'response' => $body,
             'parsed' => MorpheoPaymentAPI::checkPaymentStatus($email)
         ));
+    }
+    
+    // New AJAX handler for result details
+    public function ajax_get_result_details() {
+        check_ajax_referer('morpheo_admin_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Unauthorized'));
+        }
+        
+        $result_id = intval($_POST['result_id']);
+        
+        if (!$result_id) {
+            wp_send_json_error(array('message' => 'Result ID is required'));
+        }
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'morpheo_calculator_results';
+        
+        $result = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE id = %d",
+            $result_id
+        ));
+        
+        if (!$result) {
+            wp_send_json_error(array('message' => 'Result not found'));
+        }
+        
+        // Check if there are any appointments for this result
+        $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
+        $appointments = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $appointments_table WHERE calculator_id = %d ORDER BY created_at DESC",
+            $result_id
+        ));
+        
+        // Generate HTML for the modal
+        $html = $this->generate_result_details_html($result, $appointments);
+        
+        wp_send_json_success(array('html' => $html));
+    }
+    
+    private function generate_result_details_html($result, $appointments) {
+        $website_types = array(
+            'corporate' => 'Kurumsal Website',
+            'ecommerce' => 'E-Ticaret Sitesi',
+            'blog' => 'Blog/İçerik Sitesi',
+            'landing' => 'Özel Kampanya Sayfası'
+        );
+        
+        $design_levels = array(
+            'basic' => 'Profesyonel & Sade',
+            'custom' => 'Markanıza Özel',
+            'premium' => 'Lüks & Etkileyici'
+        );
+        
+        $features = json_decode($result->features, true);
+        $feature_names = array(
+            'seo' => 'SEO Optimizasyonu',
+            'cms' => 'İçerik Yönetimi',
+            'multilang' => 'Çoklu Dil',
+            'payment' => 'Online Ödeme'
+        );
+        
+        ob_start();
+        ?>
+        <div class="result-details">
+            <div class="detail-section">
+                <h3>👤 Müşteri Bilgileri</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <strong>Ad Soyad:</strong>
+                        <span><?php echo esc_html($result->first_name . ' ' . $result->last_name); ?></span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>E-posta:</strong>
+                        <span><a href="mailto:<?php echo esc_attr($result->email); ?>"><?php echo esc_html($result->email); ?></a></span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Telefon:</strong>
+                        <span><a href="tel:<?php echo esc_attr($result->phone); ?>"><?php echo esc_html($result->phone); ?></a></span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Şirket:</strong>
+                        <span><?php echo esc_html($result->company ?: 'Belirtilmemiş'); ?></span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Şehir:</strong>
+                        <span><?php echo esc_html($result->city ?: 'Belirtilmemiş'); ?></span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Kayıt Tarihi:</strong>
+                        <span><?php echo date('d.m.Y H:i', strtotime($result->created_at)); ?></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>🌐 Proje Detayları</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <strong>Website Türü:</strong>
+                        <span><?php echo esc_html($website_types[$result->website_type] ?? ucfirst($result->website_type)); ?></span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Sayfa Sayısı:</strong>
+                        <span><?php echo esc_html($result->page_count); ?> sayfa</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Tasarım Seviyesi:</strong>
+                        <span><?php echo esc_html($design_levels[$result->design_complexity] ?? ucfirst($result->design_complexity)); ?></span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Fiyat Aralığı:</strong>
+                        <span class="price-range"><?php echo number_format($result->min_price, 0, ',', '.') . ' - ' . number_format($result->max_price, 0, ',', '.') . ' ₺'; ?></span>
+                    </div>
+                </div>
+                
+                <?php if (!empty($features) && is_array($features)): ?>
+                <div class="detail-item">
+                    <strong>Seçilen Özellikler:</strong>
+                    <div class="features-list">
+                        <?php foreach ($features as $feature): ?>
+                            <?php if (isset($feature_names[$feature])): ?>
+                                <span class="feature-tag"><?php echo esc_html($feature_names[$feature]); ?></span>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+            
+            <?php if (!empty($appointments)): ?>
+            <div class="detail-section">
+                <h3>📅 Randevular</h3>
+                <div class="appointments-list">
+                    <?php foreach ($appointments as $appointment): ?>
+                        <?php
+                        $status_labels = array(
+                            'pending' => 'Beklemede',
+                            'paid' => 'Ödendi',
+                            'confirmed' => 'Onaylandı',
+                            'completed' => 'Tamamlandı',
+                            'cancelled' => 'İptal'
+                        );
+                        $status_class = 'status-' . $appointment->payment_status;
+                        ?>
+                        <div class="appointment-item">
+                            <div class="appointment-info">
+                                <strong><?php echo date('d.m.Y', strtotime($appointment->appointment_date)); ?></strong>
+                                <span class="time"><?php echo date('H:i', strtotime($appointment->appointment_time)); ?></span>
+                                <span class="status-badge <?php echo $status_class; ?>">
+                                    <?php echo $status_labels[$appointment->payment_status] ?? ucfirst($appointment->payment_status); ?>
+                                </span>
+                            </div>
+                            <div class="appointment-amount">
+                                <?php echo number_format($appointment->payment_amount, 0, ',', '.'); ?> ₺
+                            </div>
+                            <?php if ($appointment->notes): ?>
+                                <div class="appointment-notes">
+                                    <small><?php echo esc_html($appointment->notes); ?></small>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <div class="detail-actions">
+                <a href="mailto:<?php echo esc_attr($result->email); ?>" class="button button-primary">📧 E-posta Gönder</a>
+                <a href="tel:<?php echo esc_attr($result->phone); ?>" class="button button-secondary">📞 Ara</a>
+                <?php if (!empty($appointments)): ?>
+                    <a href="<?php echo admin_url('admin.php?page=morpheo-calculator-appointments&customer=' . urlencode($result->email)); ?>" class="button">📅 Randevuları Görüntüle</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <style>
+        .result-details {
+            max-width: 100%;
+        }
+        
+        .detail-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .detail-section:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-section h3 {
+            margin-bottom: 15px;
+            color: #1d4ed8;
+            font-size: 16px;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .detail-item strong {
+            color: #374151;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .detail-item span {
+            color: #1f2937;
+            font-weight: 500;
+        }
+        
+        .price-range {
+            color: #059669 !important;
+            font-weight: 700 !important;
+            font-size: 16px !important;
+        }
+        
+        .features-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .feature-tag {
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .appointments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .appointment-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .appointment-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .appointment-info .time {
+            background: #e3f2fd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-paid { background: #d1ecf1; color: #0c5460; }
+        .status-confirmed { background: #d4edda; color: #155724; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        
+        .appointment-amount {
+            font-weight: 700;
+            color: #059669;
+        }
+        
+        .appointment-notes {
+            margin-top: 8px;
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .detail-actions {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 600px) {
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .appointment-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .detail-actions {
+                flex-direction: column;
+            }
+        }
+        </style>
+        <?php
+        return ob_get_clean();
     }
     
     public function send_appointment_reminders() {
