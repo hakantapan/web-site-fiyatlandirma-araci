@@ -261,7 +261,7 @@ class MorpheoCalculator {
         // Get booked time slots for the selected date
         $booked_slots = $wpdb->get_col($wpdb->prepare(
             "SELECT appointment_time FROM $appointments_table 
-             WHERE appointment_date =  AND status != 'cancelled'",
+             WHERE appointment_date = %s AND payment_status != 'cancelled'",
             $date
         ));
         
@@ -296,7 +296,7 @@ class MorpheoCalculator {
         $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
         $existing = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM $appointments_table 
-             WHERE appointment_date = %s AND appointment_time = %s AND status != 'cancelled'",
+             WHERE appointment_date = %s AND appointment_time = %s AND payment_status != 'cancelled'",
             $appointment_date, $appointment_time
         ));
         
@@ -305,12 +305,14 @@ class MorpheoCalculator {
         }
         
         // Create appointment
+        $consultation_fee = get_option('morpheo_consultation_fee', '250');
         $appointment_data = array(
             'calculator_id' => $calculator_id,
             'appointment_date' => $appointment_date,
             'appointment_time' => $appointment_time,
             'status' => 'pending',
             'payment_status' => 'pending',
+            'payment_amount' => floatval($consultation_fee),
             'created_at' => current_time('mysql')
         );
         
@@ -320,11 +322,30 @@ class MorpheoCalculator {
             $appointment_id = $wpdb->insert_id;
             
             // Generate payment URL
-            $payment_url = MorpheoPaymentAPI::generatePaymentURL($appointment_id, $calculator_data);
+            $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu');
+            
+            // Add appointment parameters to payment URL
+            $payment_params = array(
+                'appointment_id' => $appointment_id,
+                'calculator_id' => $calculator_id,
+                'ucret' => $consultation_fee
+            );
+            
+            $separator = strpos($woocommerce_url, '?') !== false ? '&' : '?';
+            $payment_url = $woocommerce_url . $separator . http_build_query($payment_params);
+            
+            // Update appointment with payment URL
+            $wpdb->update(
+                $appointments_table,
+                array('payment_url' => $payment_url),
+                array('id' => $appointment_id),
+                array('%s'),
+                array('%d')
+            );
             
             // Send confirmation email
-            MorpheoEmailSender::sendCustomerAppointmentConfirmation($appointment_data, $calculator_data, $payment_url);
-            MorpheoEmailSender::sendAdminAppointmentNotification($appointment_data, $calculator_data);
+            MorpheoEmailSender::sendCustomerConfirmation($appointment_data, $calculator_data, $payment_url);
+            MorpheoEmailSender::sendAdminNotification($appointment_data, $calculator_data);
             
             // Send WhatsApp notifications
             MorpheoWhatsAppSender::sendCustomerAppointmentConfirmation($appointment_data, $calculator_data, $payment_url);
@@ -411,32 +432,92 @@ class MorpheoCalculator {
         check_admin_referer('morpheo_admin_nonce', 'nonce');
         
         $appointment_id = intval($_POST['appointment_id']);
+        $email = sanitize_email($_POST['email']);
         
-        if (!$appointment_id) {
-            wp_send_json_error(array('message' => 'Appointment ID is required'));
+        if (!$appointment_id || !$email) {
+            wp_send_json_error(array('message' => 'Missing required parameters'));
         }
         
-        $result = MorpheoPaymentAPI::checkSinglePayment($appointment_id);
+        // Check payment status via API
+        $payment_info = MorpheoPaymentAPI::checkPaymentStatus($email);
         
-        if ($result) {
-            wp_send_json_success(array('message' => 'Payment status updated'));
+        if ($payment_info && $payment_info['paid']) {
+            // Update appointment status
+            global $wpdb;
+            $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
+            
+            $updated = $wpdb->update(
+                $appointments_table,
+                array(
+                    'payment_status' => 'paid',
+                    'updated_at' => current_time('mysql'),
+                    'notes' => 'Ödeme API ile doğrulandı: ' . date('d.m.Y H:i')
+                ),
+                array('id' => $appointment_id),
+                array('%s', '%s', '%s'),
+                array('%d')
+            );
+            
+            if ($updated) {
+                wp_send_json_success(array(
+                    'message' => 'Ödeme doğrulandı ve randevu durumu güncellendi',
+                    'payment_info' => $payment_info
+                ));
+            } else {
+                wp_send_json_error(array('message' => 'Ödeme doğrulandı ancak veritabanı güncellenemedi'));
+            }
         } else {
-            wp_send_json_error(array('message' => 'Failed to check payment status'));
+            wp_send_json_success(array(
+                'message' => 'Henüz ödeme alınmamış',
+                'payment_info' => $payment_info
+            ));
         }
     }
     
     public function ajax_get_api_response() {
         check_admin_referer('morpheo_admin_nonce', 'nonce');
         
-        $appointment_id = intval($_POST['appointment_id']);
+        $email = sanitize_email($_POST['email']);
         
-        if (!$appointment_id) {
-            wp_send_json_error(array('message' => 'Appointment ID is required'));
+        if (!$email) {
+            wp_send_json_error(array('message' => 'E-posta adresi gerekli'));
         }
         
-        $response = MorpheoPaymentAPI::getAPIResponse($appointment_id);
+        // Get raw API response for debugging
+        $api_url = 'https://morpheodijital.com/satis/wp-content/themes/snn-brx-child-theme/siparis-sorgula.php';
+        $api_key = 't3RcN@f9h$5!ZxLuQ1W#pK7eMv%BdA82';
         
-        wp_send_json_success(array('response' => $response));
+        $url = $api_url . '?' . http_build_query(array(
+            'email' => $email,
+            'key' => $api_key
+        ));
+        
+        $response = wp_remote_get($url, array(
+            'timeout' => 30,
+            'headers' => array(
+                'User-Agent' => 'Morpheo Calculator Admin Debug'
+            )
+        ));
+        
+        if (is_wp_error($response)) {
+            wp_send_json_error(array('message' => 'API isteği başarısız: ' . $response->get_error_message()));
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $status_code = wp_remote_retrieve_response_code($response);
+        
+        // Try to parse as JSON
+        $parsed = json_decode($body, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $parsed = array('error' => 'JSON parse hatası', 'raw_response' => $body);
+        }
+        
+        wp_send_json_success(array(
+            'url' => $url,
+            'status_code' => $status_code,
+            'response' => $body,
+            'parsed' => $parsed
+        ));
     }
     
     public function ajax_get_result_details() {
@@ -456,33 +537,130 @@ class MorpheoCalculator {
             $result_id
         ));
         
-        if ($result) {
-            // Format the data for display
-            $formatted_result = array(
-                'id' => $result->id,
-                'customer_name' => $result->first_name . ' ' . $result->last_name,
-                'email' => $result->email,
-                'phone' => $result->phone,
-                'company' => $result->company,
-                'city' => $result->city,
-                'website_type' => $result->website_type,
-                'page_count' => $result->page_count,
-                'features' => json_decode($result->features, true),
-                'design_complexity' => $result->design_complexity,
-                'timeline' => $result->timeline,
-                'technical_seo' => $result->technical_seo,
-                'management_features' => $result->management_features,
-                'security_features' => $result->security_features,
-                'ecommerce_modules' => $result->ecommerce_modules,
-                'min_price' => number_format($result->min_price, 0, ',', '.'),
-                'max_price' => number_format($result->max_price, 0, ',', '.'),
-                'created_at' => date('d.m.Y H:i', strtotime($result->created_at))
-            );
-            
-            wp_send_json_success($formatted_result);
-        } else {
+        if (!$result) {
             wp_send_json_error(array('message' => 'Result not found'));
         }
+        
+        // Format the result details as HTML
+        $features = json_decode($result->features, true);
+        $features_list = '';
+        if (!empty($features) && is_array($features)) {
+            $feature_names = array(
+                'seo' => 'SEO Optimizasyonu',
+                'cms' => 'İçerik Yönetimi',
+                'multilang' => 'Çoklu Dil',
+                'payment' => 'Online Ödeme'
+            );
+            
+            foreach ($features as $feature) {
+                if (isset($feature_names[$feature])) {
+                    $features_list .= '<span class="feature-badge">' . esc_html($feature_names[$feature]) . '</span>';
+                }
+            }
+        }
+        
+        $html = '
+        <div class="result-details">
+            <div class="detail-section">
+                <h4>👤 Müşteri Bilgileri</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Ad Soyad:</span>
+                        <span class="detail-value">' . esc_html($result->first_name . ' ' . $result->last_name) . '</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">E-posta:</span>
+                        <span class="detail-value"><a href="mailto:' . esc_attr($result->email) . '">' . esc_html($result->email) . '</a></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Telefon:</span>
+                        <span class="detail-value"><a href="tel:' . esc_attr($result->phone) . '">' . esc_html($result->phone) . '</a></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Şirket:</span>
+                        <span class="detail-value">' . esc_html($result->company ?: 'Belirtilmemiş') . '</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Şehir:</span>
+                        <span class="detail-value">' . esc_html($result->city ?: 'Belirtilmemiş') . '</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h4>🌐 Proje Detayları</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Website Türü:</span>
+                        <span class="detail-value">' . esc_html(ucfirst($result->website_type)) . '</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Sayfa Sayısı:</span>
+                        <span class="detail-value">' . esc_html($result->page_count) . ' sayfa</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Tasarım Karmaşıklığı:</span>
+                        <span class="detail-value">' . esc_html(ucfirst($result->design_complexity)) . '</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Zaman Çizelgesi:</span>
+                        <span class="detail-value">' . esc_html(ucfirst($result->timeline)) . '</span>
+                    </div>
+                </div>
+                
+                ' . ($features_list ? '
+                <div class="detail-item">
+                    <span class="detail-label">Seçilen Özellikler:</span>
+                    <div class="features-container">' . $features_list . '</div>
+                </div>
+                ' : '') . '
+            </div>
+            
+            <div class="detail-section">
+                <h4>💰 Fiyat Bilgileri</h4>
+                <div class="price-info">
+                    <div class="price-range">
+                        <span class="price-min">' . number_format($result->min_price, 0, ',', '.') . ' ₺</span>
+                        <span class="price-separator">-</span>
+                        <span class="price-max">' . number_format($result->max_price, 0, ',', '.') . ' ₺</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h4>📅 Kayıt Bilgileri</h4>
+                <div class="detail-item">
+                    <span class="detail-label">Oluşturulma Tarihi:</span>
+                    <span class="detail-value">' . date('d.m.Y H:i', strtotime($result->created_at)) . '</span>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+        .result-details { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .detail-section { margin-bottom: 25px; padding: 20px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3498db; }
+        .detail-section h4 { margin: 0 0 15px 0; color: #2c3e50; font-size: 16px; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .detail-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+        .detail-item:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #64748b; }
+        .detail-value { color: #1e293b; }
+        .detail-value a { color: #3498db; text-decoration: none; }
+        .detail-value a:hover { text-decoration: underline; }
+        .features-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .feature-badge { background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .price-info { text-align: center; }
+        .price-range { font-size: 24px; font-weight: 700; color: #27ae60; }
+        .price-separator { margin: 0 10px; color: #95a5a6; }
+        @media (max-width: 600px) {
+            .detail-grid { grid-template-columns: 1fr; }
+            .detail-item { flex-direction: column; }
+            .detail-value { margin-top: 4px; }
+        }
+        </style>
+        ';
+        
+        wp_send_json_success(array('html' => $html));
     }
     
     public function send_appointment_reminders() {
@@ -498,8 +676,7 @@ class MorpheoCalculator {
             "SELECT a.*, r.* FROM $appointments_table a 
              LEFT JOIN $results_table r ON a.calculator_id = r.id 
              WHERE a.appointment_date = %s 
-             AND a.status = 'confirmed' 
-             AND a.payment_status = 'completed'
+             AND a.payment_status = 'paid'
              AND (a.reminder_sent IS NULL OR a.reminder_sent = 0)",
             $tomorrow
         ));
@@ -510,6 +687,16 @@ class MorpheoCalculator {
             
             // Send WhatsApp reminder
             MorpheoWhatsAppSender::sendAppointmentReminder($appointment, $appointment);
+            
+            // Mark as reminded
+            $wpdb->update(
+                $appointments_table,
+                array('reminder_sent' => 1),
+                array('id' => $appointment->id)
+            );
+        }
+    }
+    
             
             // Mark as reminded
             $wpdb->update(
@@ -616,8 +803,9 @@ class MorpheoCalculator {
             appointment_time time NOT NULL,
             status varchar(20) DEFAULT 'pending',
             payment_status varchar(20) DEFAULT 'pending',
+            payment_amount decimal(10,2) DEFAULT 0,
             payment_url text,
-            api_response text,
+            notes text,
             reminder_sent tinyint(1) DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
