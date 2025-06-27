@@ -562,7 +562,7 @@
                     </div>
                     
                     <button id="book-appointment-btn" class="btn btn-primary btn-large">
-                        🎯 Teklifimi Hesapla ve Randevu Al
+                        🎯 Ön Görüşme İçin Randevu Al
                     </button>
                 </div>
             </div>
@@ -615,7 +615,7 @@
                     </div>
                     <div id="appointment-error" class="error-message hidden"></div>
                     <button id="confirm-appointment-btn" class="btn btn-primary btn-large" disabled>
-                        💳 Ödeme Yap ve Randevuyu Onayla
+                        💳 Ödemeye Geç ve Randevuyu Onayla
                     </button>
                 </div>
             </div>
