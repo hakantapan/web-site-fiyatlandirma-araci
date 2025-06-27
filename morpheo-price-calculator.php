@@ -107,24 +107,24 @@ class MorpheoCalculator {
     }
 
     public function register_settings() {
-        register_setting('morpheo_calculator_options', 'morpheo_booking_url', array(
-            'type' => 'string',
-            'sanitize_callback' => 'esc_url_raw',
-            'default' => home_url('/iletisim')
-        ));
-        
-        register_setting('morpheo_calculator_options', 'morpheo_consultation_fee', array(
-            'type' => 'string',
-            'sanitize_callback' => 'sanitize_text_field',
-            'default' => '250'
-        ));
-        
-        register_setting('morpheo_calculator_options', 'morpheo_admin_emails', array(
-            'type' => 'string',
-            'sanitize_callback' => 'sanitize_text_field',
-            'default' => ''
-        ));
-    }
+    register_setting('morpheo_calculator_options', 'morpheo_woocommerce_url', array(
+        'type' => 'string',
+        'sanitize_callback' => 'esc_url_raw',
+        'default' => 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu'
+    ));
+    
+    register_setting('morpheo_calculator_options', 'morpheo_consultation_fee', array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => '250'
+    ));
+    
+    register_setting('morpheo_calculator_options', 'morpheo_admin_emails', array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_text_field',
+        'default' => ''
+    ));
+}
     
     public function add_admin_menu() {
         add_menu_page(
