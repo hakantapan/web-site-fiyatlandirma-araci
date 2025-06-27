@@ -24,8 +24,8 @@ define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-templates.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-sender.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-api.php';
-require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-reminder.php'; // Ensure this is included for getMinutesLeft
-require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/whatsapp-sender.php'; // New WhatsApp sender
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-reminder.php';
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/whatsapp-sender.php';
 
 class MorpheoCalculator {
     
@@ -128,7 +128,7 @@ class MorpheoCalculator {
             'default' => ''
         ));
 
-        // New WhatsApp settings
+        // WhatsApp settings
         register_setting('morpheo_calculator_options', 'morpheo_whatsapp_enable', array(
             'type' => 'string',
             'sanitize_callback' => 'sanitize_text_field',
