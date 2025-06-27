@@ -303,7 +303,7 @@ class MorpheoCalculator {
                     'calculator_id' => $calculator_id,
                     'appointment_id' => $appointment_id,
                     'ucret' => $consultation_fee,
-                    'urun' => 'web-site-konsultasyon'
+        
                 ));
                 
                 // Send emails with payment URL
