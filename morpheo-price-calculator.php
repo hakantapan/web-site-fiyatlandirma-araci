@@ -4,7 +4,7 @@
  * Plugin URI: https://morpheodijital.com
  * GitHub Plugin URI: https://github.com/hakantapan/web-site-fiyatlandirma-araci
  * Description: Professional website price calculator with dark mode, e-commerce modules, and appointment booking
- * Version: 2.2.1
+ * Version: 2.2.2
  * Author: Morpheo Dijital
  * License: GPL v2 or later
  * Text Domain: morpheo-calculator
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MORPHEO_CALC_VERSION', '2.2.1');
+define('MORPHEO_CALC_VERSION', '2.2.2');
 define('MORPHEO_CALC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -311,26 +311,23 @@ class MorpheoCalculator {
             ));
             
             if ($calculator_data) {
+                // Get WooCommerce URL from settings
+                $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu');
+                
                 // Create payment URL parameters
                 $payment_params = array(
-                    'randevu_tarihi' => $appointment_date,
-                    'randevu_saati' => $appointment_time,
-                    'musteri_adi' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
-                    'musteri_email' => $calculator_data->email,
-                    'musteri_telefon' => $calculator_data->phone,
-                    'proje_tipi' => $calculator_data->website_type,
-                    'calculator_id' => $calculator_id,
                     'appointment_id' => $appointment_id,
-                    'ucret' => $consultation_fee,
-                    'urun' => 'web-site-konsultasyon'
+                    'calculator_id' => $calculator_id,
+                    'ucret' => $consultation_fee
                 );
                 
                 // Build the payment URL properly
-                $base_url = 'https://morpheodijital.com/satis/';
-                $payment_url = $base_url . '?' . http_build_query($payment_params, '', '&', PHP_QUERY_RFC3986);
+                $separator = strpos($woocommerce_url, '?') !== false ? '&' : '?';
+                $payment_url = $woocommerce_url . $separator . http_build_query($payment_params, '', '&', PHP_QUERY_RFC3986);
                 
                 // Log the generated payment URL for debugging
                 error_log('Morpheo Calculator: Generated Payment URL: ' . $payment_url);
+                error_log('Morpheo Calculator: Base WooCommerce URL: ' . $woocommerce_url);
                 error_log('Morpheo Calculator: Payment Parameters: ' . print_r($payment_params, true));
 
                 // Prepare appointment data

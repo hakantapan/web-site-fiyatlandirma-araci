@@ -56,12 +56,41 @@ class MorpheoPaymentReminder {
                 .urgent-box { background: #fef2f2; border: 3px solid #dc2626; border-radius: 12px; padding: 25px; margin: 20px 0; text-align: center; animation: pulse 2s infinite; }
                 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
                 .countdown { font-size: 24px; font-weight: bold; color: #dc2626; margin: 15px 0; }
-                .payment-button { display: inline-block; background: linear-gradient(135deg, #dc2626, #991b1b); color: white; padding: 20px 40px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 18px; margin: 20px 0; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3); }
-                .payment-button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4); }
+                .payment-button { 
+                    display: inline-block; 
+                    background: linear-gradient(135deg, #dc2626, #991b1b); 
+                    color: white !important; 
+                    padding: 20px 40px; 
+                    text-decoration: none !important; 
+                    border-radius: 12px; 
+                    font-weight: 700; 
+                    font-size: 18px; 
+                    margin: 20px 0; 
+                    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3); 
+                }
+                .payment-button:hover { 
+                    transform: translateY(-2px); 
+                    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4); 
+                    color: white !important;
+                    text-decoration: none !important;
+                }
                 .appointment-details { background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }
                 .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
                 .detail-row:last-child { border-bottom: none; }
                 .footer { background: #1e293b; color: #94a3b8; padding: 20px; text-align: center; }
+                .payment-url {
+                    word-break: break-all; 
+                    background: #f8fafc; 
+                    padding: 15px; 
+                    border-radius: 8px; 
+                    font-family: monospace;
+                    border: 1px solid #e2e8f0;
+                    margin: 15px 0;
+                }
+                .payment-url a {
+                    color: #dc2626 !important;
+                    text-decoration: underline !important;
+                }
             </style>
         </head>
         <body>
@@ -85,9 +114,16 @@ class MorpheoPaymentReminder {
                     </div>
                     
                     <div style="text-align: center;">
-                        <a href="' . esc_url($data['payment_url']) . '" class="payment-button">
+                        <a href="' . esc_url($data['payment_url']) . '" target="_blank" class="payment-button">
                             💳 HEMEN ÖDEME YAP - ' . number_format($data['consultation_fee'], 0, ',', '.') . ' ₺
                         </a>
+                    </div>
+                    
+                    <div style="margin-top: 20px; font-size: 14px; color: #64748b; text-align: center;">
+                        <p><strong>Ödeme yapmak için yukarıdaki butona tıklayın veya aşağıdaki linki kopyalayın:</strong></p>
+                        <div class="payment-url">
+                            <a href="' . esc_url($data['payment_url']) . '" target="_blank">' . esc_html($data['payment_url']) . '</a>
+                        </div>
                     </div>
                     
                     <div class="appointment-details">
@@ -153,14 +189,17 @@ class MorpheoPaymentReminder {
         ");
         
         foreach ($pending_appointments as $appointment) {
-            // Create payment URL
+            // Get WooCommerce URL from settings
             $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu');
+            
+            // Create payment URL parameters
             $payment_params = array(
                 'appointment_id' => $appointment->id,
                 'calculator_id' => $appointment->calculator_id,
                 'ucret' => $appointment->payment_amount
             );
             
+            // Build the payment URL properly
             $separator = strpos($woocommerce_url, '?') !== false ? '&' : '?';
             $payment_url = $woocommerce_url . $separator . http_build_query($payment_params);
             
