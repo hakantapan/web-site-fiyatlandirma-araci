@@ -562,7 +562,7 @@
                     </div>
                     
                     <button id="book-appointment-btn" class="btn btn-primary btn-large">
-                        🎯 Teklifimi Hesapla ve Randevu Al
+                        💼 Ücretli Konsültasyon Randevusu Al
                     </button>
                 </div>
             </div>
