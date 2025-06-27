@@ -246,29 +246,29 @@
 
     const websiteType = websiteTypes[recommendation.type]
     const recommendationHtml = `
-     <div class="recommended-card">
-       <div class="recommendation-badge">
-         <span>🎯 Size Özel Öneri</span>
-       </div>
-       <div class="recommendation-content">
-         <div class="recommendation-type">
-           <h3>${websiteType.name}</h3>
-           <div class="recommendation-price">
-             ${websiteType.basePrice.toLocaleString("tr-TR")} ₺'den başlayan fiyatlarla
-           </div>
-         </div>
-         <div class="recommendation-reasoning">
-           <p>${recommendation.reasoning}</p>
-         </div>
-         <div class="recommendation-features">
-           <h4>Bu çözümde neler var?</h4>
-           <ul id="recommendation-features-list">
-             ${getRecommendationFeatures(recommendation.type)}
-           </ul>
-         </div>
-       </div>
-     </div>
-   `
+      <div class="recommended-card">
+        <div class="recommendation-badge">
+          <span>🎯 Size Özel Öneri</span>
+        </div>
+        <div class="recommendation-content">
+          <div class="recommendation-type">
+            <h3>${websiteType.name}</h3>
+            <div class="recommendation-price">
+              ${websiteType.basePrice.toLocaleString("tr-TR")} ₺'den başlayan fiyatlarla
+            </div>
+          </div>
+          <div class="recommendation-reasoning">
+            <p>${recommendation.reasoning}</p>
+          </div>
+          <div class="recommendation-features">
+            <h4>Bu çözümde neler var?</h4>
+            <ul id="recommendation-features-list">
+              ${getRecommendationFeatures(recommendation.type)}
+            </ul>
+          </div>
+        </div>
+      </div>
+    `
 
     $("#recommended-solution").html(recommendationHtml)
 
@@ -583,46 +583,42 @@
 
   function showLoadingOverlay() {
     const loadingHtml = `
-   <div id="loading-overlay" class="loading-overlay">
-     <div class="loading-content">
-       <div class="loading-spinner"></div>
-       <div class="loading-title">
-         Teklifiniz Hazırlanıyor<span class="loading-dots"></span>
-       </div>
-       <div class="loading-description">
-         Size özel fiyat hesaplaması yapılıyor
-       </div>
-       
-       <div class="loading-steps">
-         <div class="loading-step" id="step-1">
-           <span class="loading-step-icon">📊</span>
-           <span>Proje türü analiz ediliyor</span>
-         </div>
-         <div class="loading-step" id="step-2">
-           <span class="loading-step-icon">📄</span>
-           <span>Sayfa sayısı hesaplanıyor</span>
-         </div>
-         <div class="loading-step" id="step-3">
-           <span class="loading-step-icon">🎨</span>
-           <span>Tasarım karmaşıklığı değerlendiriliyor</span>
-         </div>
-         <div class="loading-step" id="step-4">
-           <span class="loading-step-icon">💰</span>
-           <span>Fiyat aralığı belirleniyor</span>
-         </div>
-       </div>
-       
-       <div class="loading-progress">
-         <div class="loading-progress-bar"></div>
-       </div>
-     </div>
-   </div>
- `
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">
+          Teklifiniz Hazırlanıyor<span class="loading-dots"></span>
+        </div>
+        <div class="loading-description">
+          Size özel fiyat hesaplaması yapılıyor
+        </div>
+        
+        <div class="calculation-steps">
+          <div class="calculation-step" id="step-1">
+            <span class="step-icon">📊</span>
+            <span>Proje türü analiz ediliyor</span>
+          </div>
+          <div class="calculation-step" id="step-2">
+            <span class="step-icon">📄</span>
+            <span>Sayfa sayısı hesaplanıyor</span>
+          </div>
+          <div class="calculation-step" id="step-3">
+            <span class="step-icon">🎨</span>
+            <span>Tasarım karmaşıklığı değerlendiriliyor</span>
+          </div>
+          <div class="calculation-step" id="step-4">
+            <span class="step-icon">💰</span>
+            <span>Fiyat aralığı belirleniyor</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
 
     $("body").append(loadingHtml)
 
     // Reset all steps
-    $(".loading-step").removeClass("active completed")
+    $(".calculation-step").removeClass("active completed")
   }
 
   function hideLoadingOverlay() {
@@ -639,7 +635,7 @@
       step.addClass("active").removeClass("completed")
     } else if (status === "completed") {
       step.removeClass("active").addClass("completed")
-      step.find(".loading-step-icon").html("✅")
+      step.find(".step-icon").html("✅")
     }
   }
 
@@ -647,64 +643,64 @@
     // Price summary
     const websiteType = websiteTypes[calculatorData.websiteType]
     const summaryHtml = `
-     <div class="price-summary-content">
-       <div class="selected-solution">
-         <h3>📋 Seçtiğiniz Çözüm</h3>
-         <div class="solution-details">
-           <div class="solution-type">${websiteType.name}</div>
-           <div class="solution-features">
-             <span>${calculatorData.pageCount} sayfa</span>
-             <span>${calculatorData.designComplexity === "basic" ? "Profesyonel" : calculatorData.designComplexity === "custom" ? "Özel" : "Premium"} tasarım</span>
-             ${calculatorData.features.length > 0 ? `<span>${calculatorData.features.length} ek özellik</span>` : ""}
-           </div>
-         </div>
-       </div>
-     </div>
-   `
+      <div class="price-summary-content">
+        <div class="selected-solution">
+          <h3>📋 Seçtiğiniz Çözüm</h3>
+          <div class="solution-details">
+            <div class="solution-type">${websiteType.name}</div>
+            <div class="solution-features">
+              <span>${calculatorData.pageCount} sayfa</span>
+              <span>${calculatorData.designComplexity === "basic" ? "Profesyonel" : calculatorData.designComplexity === "custom" ? "Özel" : "Premium"} tasarım</span>
+              ${calculatorData.features.length > 0 ? `<span>${calculatorData.features.length} ek özellik</span>` : ""}
+            </div>
+          </div>
+        </div>
+      </div>
+    `
     $("#price-summary").html(summaryHtml)
 
     // Price breakdown
     const breakdownHtml = `
-     <div class="price-breakdown-content">
-       <h4>💰 Fiyat Detayları</h4>
-       <div class="breakdown-items">
-         <div class="breakdown-item">
-           <span>Temel ${websiteType.name}</span>
-           <span>${price.breakdown.basePrice.toLocaleString("tr-TR")} ₺</span>
-         </div>
-         ${
-           price.breakdown.pagePrice > 0
-             ? `
-           <div class="breakdown-item">
-             <span>Ek sayfalar (${calculatorData.pageCount - 5} sayfa)</span>
-             <span>${price.breakdown.pagePrice.toLocaleString("tr-TR")} ₺</span>
-           </div>
-         `
-             : ""
-         }
-         ${
-           price.breakdown.featuresPrice > 0
-             ? `
-           <div class="breakdown-item">
-             <span>Ek özellikler</span>
-             <span>${price.breakdown.featuresPrice.toLocaleString("tr-TR")} ₺</span>
-           </div>
-         `
-             : ""
-         }
-         ${
-           price.breakdown.designMultiplier > 1
-             ? `
-           <div class="breakdown-item">
-             <span>Tasarım ek ücreti (%${Math.round((price.breakdown.designMultiplier - 1) * 100)})</span>
-             <span>${(price.breakdown.subtotal - (price.breakdown.basePrice + price.breakdown.pagePrice + price.breakdown.featuresPrice)).toLocaleString("tr-TR")} ₺</span>
-           </div>
-         `
-             : ""
-         }
-       </div>
-     </div>
-   `
+      <div class="price-breakdown-content">
+        <h4>💰 Fiyat Detayları</h4>
+        <div class="breakdown-items">
+          <div class="breakdown-item">
+            <span>Temel ${websiteType.name}</span>
+            <span>${price.breakdown.basePrice.toLocaleString("tr-TR")} ₺</span>
+          </div>
+          ${
+            price.breakdown.pagePrice > 0
+              ? `
+            <div class="breakdown-item">
+              <span>Ek sayfalar (${calculatorData.pageCount - 5} sayfa)</span>
+              <span>${price.breakdown.pagePrice.toLocaleString("tr-TR")} ₺</span>
+            </div>
+          `
+              : ""
+          }
+          ${
+            price.breakdown.featuresPrice > 0
+              ? `
+            <div class="breakdown-item">
+              <span>Ek özellikler</span>
+              <span>${price.breakdown.featuresPrice.toLocaleString("tr-TR")} ₺</span>
+            </div>
+          `
+              : ""
+          }
+          ${
+            price.breakdown.designMultiplier > 1
+              ? `
+            <div class="breakdown-item">
+              <span>Tasarım ek ücreti (%${Math.round((price.breakdown.designMultiplier - 1) * 100)})</span>
+              <span>${(price.breakdown.subtotal - (price.breakdown.basePrice + price.breakdown.pagePrice + price.breakdown.featuresPrice)).toLocaleString("tr-TR")} ₺</span>
+            </div>
+          `
+              : ""
+          }
+        </div>
+      </div>
+    `
     $("#price-breakdown").html(breakdownHtml)
 
     // Show price range
@@ -845,9 +841,9 @@
 
             timeSlots.append(
               `<div class="${slotClass}" data-time="${time}" title="${slotTitle}">
-               ${time}
-               ${isBooked ? '<span class="booked-indicator">✗</span>' : ""}
-             </div>`,
+                ${time}
+                ${isBooked ? '<span class="booked-indicator">✗</span>' : ""}
+              </div>`,
             )
           })
 
@@ -928,25 +924,15 @@
           // Yeni sekmede aç
           window.open(paymentUrl, "_blank")
 
-          // Send WhatsApp notification
-          sendWhatsAppNotification(response.data.appointment_id)
-
           // Modal'ı kapat ve bilgi mesajı göster
           closeModal()
 
           alert(
-            `Randevunuz geçici olarak rezerve edildi ve ödeme sayfasına yönlendiriliyorsunuz.
-
-` +
-              `Randevu Detayları:
-` +
-              `📅 Tarih: ${new Date(appointmentDate).toLocaleDateString("tr-TR")}
-` +
-              `🕐 Saat: ${calculatorData.appointmentTime}
-` +
-              `💰 Ücret: ${window.morpheo_ajax.consultation_fee} ₺
-
-` +
+            `Randevunuz geçici olarak rezerve edildi ve ödeme sayfasına yönlendiriliyorsunuz.\n\n` +
+              `Randevu Detayları:\n` +
+              `📅 Tarih: ${new Date(appointmentDate).toLocaleDateString("tr-TR")}\n` +
+              `🕐 Saat: ${calculatorData.appointmentTime}\n` +
+              `💰 Ücret: ${window.morpheo_ajax.consultation_fee} ₺\n\n` +
               `⚠️ Önemli: Ödeme işlemini 15 dakika içinde tamamlamazsanız randevunuz iptal olacaktır.`,
           )
         } else {
@@ -957,24 +943,6 @@
     ).fail(() => {
       errorEl.text("Randevu kaydedilirken hata oluştu. Lütfen tekrar deneyin.").removeClass("hidden")
       $("#confirm-appointment-btn").prop("disabled", false).text("💳 Ödeme Yap ve Randevuyu Onayla")
-    })
-  }
-
-  function sendWhatsAppNotification(appointmentId) {
-    // Send WhatsApp notification to admin
-    $.post(
-      window.morpheo_ajax.ajax_url,
-      {
-        action: "send_whatsapp_notification",
-        nonce: window.morpheo_ajax.nonce,
-        appointment_id: appointmentId,
-        type: "new_appointment",
-      },
-      (response) => {
-        console.log("WhatsApp notification sent:", response)
-      },
-    ).fail((xhr, status, error) => {
-      console.error("WhatsApp notification error:", error)
     })
   }
 })(window.jQuery)
