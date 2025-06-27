@@ -19,6 +19,25 @@
             update_option('morpheo_admin_emails', sanitize_text_field($_POST['morpheo_admin_emails']));
         }
         
+        // Update WhatsApp settings
+        if (isset($_POST['morpheo_whatsapp_token'])) {
+            update_option('morpheo_whatsapp_token', sanitize_text_field($_POST['morpheo_whatsapp_token']));
+        }
+        
+        if (isset($_POST['morpheo_whatsapp_from'])) {
+            update_option('morpheo_whatsapp_from', sanitize_text_field($_POST['morpheo_whatsapp_from']));
+        }
+        
+        if (isset($_POST['morpheo_whatsapp_admin'])) {
+            update_option('morpheo_whatsapp_admin', sanitize_text_field($_POST['morpheo_whatsapp_admin']));
+        }
+        
+        if (isset($_POST['morpheo_whatsapp_enabled'])) {
+            update_option('morpheo_whatsapp_enabled', '1');
+        } else {
+            update_option('morpheo_whatsapp_enabled', '0');
+        }
+        
         echo '<div class="notice notice-success is-dismissible"><p>Ayarlar başarıyla kaydedildi!</p></div>';
     }
     ?>
@@ -55,11 +74,62 @@
                     </td>
                 </tr>
             </table>
-            
-            <p class="submit">
-                <input type="submit" name="submit" class="button-primary" value="Ayarları Kaydet" />
-            </p>
         </div>
+
+        <div class="card">
+            <h2>💬 WhatsApp Entegrasyonu</h2>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">WhatsApp Entegrasyonu</th>
+                    <td>
+                        <?php $whatsapp_enabled = get_option('morpheo_whatsapp_enabled', '0'); ?>
+                        <label>
+                            <input type="checkbox" name="morpheo_whatsapp_enabled" value="1" <?php checked($whatsapp_enabled, '1'); ?> />
+                            WhatsApp bildirimlerini etkinleştir
+                        </label>
+                        <p class="description">Randevu bildirimleri WhatsApp üzerinden de gönderilsin.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">WhatsApp API Token</th>
+                    <td>
+                        <?php $whatsapp_token = get_option('morpheo_whatsapp_token', ''); ?>
+                        <input type="text" name="morpheo_whatsapp_token" value="<?php echo esc_attr($whatsapp_token); ?>" class="regular-text" style="width: 100%; max-width: 600px;" />
+                        <p class="description">OtomatikBot.com'dan aldığınız JWT token'ı buraya girin.</p>
+                        <p class="description"><strong>Örnek:</strong> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Gönderen Numara</th>
+                    <td>
+                        <?php $whatsapp_from = get_option('morpheo_whatsapp_from', '905076005662'); ?>
+                        <input type="text" name="morpheo_whatsapp_from" value="<?php echo esc_attr($whatsapp_from); ?>" class="regular-text" />
+                        <p class="description">WhatsApp mesajlarının gönderileceği numara (ülke kodu ile birlikte, + işareti olmadan).</p>
+                        <p class="description"><strong>Örnek:</strong> 905551234567</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Admin WhatsApp Numarası</th>
+                    <td>
+                        <?php $whatsapp_admin = get_option('morpheo_whatsapp_admin', '908503073709'); ?>
+                        <input type="text" name="morpheo_whatsapp_admin" value="<?php echo esc_attr($whatsapp_admin); ?>" class="regular-text" />
+                        <p class="description">Yeni randevu bildirimlerinin gönderileceği admin WhatsApp numarası.</p>
+                        <p class="description"><strong>Örnek:</strong> 905551234567</p>
+                    </td>
+                </tr>
+            </table>
+            
+            <div class="whatsapp-test-section">
+                <h4>🧪 WhatsApp Test</h4>
+                <p>Mevcut ayarlarınızla test mesajı gönderin:</p>
+                <button type="button" class="button button-secondary" id="test-whatsapp">📱 Test Mesajı Gönder</button>
+                <div id="whatsapp-test-result" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+        
+        <p class="submit">
+            <input type="submit" name="submit" class="button-primary" value="Ayarları Kaydet" />
+        </p>
     </form>
 
     <div class="card">
@@ -162,6 +232,24 @@
                     ?>
                 </td>
             </tr>
+            <tr>
+                <th scope="row">WhatsApp Durumu:</th>
+                <td>
+                    <?php 
+                    $whatsapp_enabled = get_option('morpheo_whatsapp_enabled', '0');
+                    $whatsapp_token = get_option('morpheo_whatsapp_token', '');
+                    
+                    if ($whatsapp_enabled && !empty($whatsapp_token)) {
+                        echo '<span style="color: green;">✅ Aktif</span>';
+                        echo '<br><small>Token: ' . substr($whatsapp_token, 0, 20) . '...</small>';
+                        echo '<br><small>Gönderen: ' . esc_html(get_option('morpheo_whatsapp_from', 'Ayarlanmamış')) . '</small>';
+                        echo '<br><small>Admin: ' . esc_html(get_option('morpheo_whatsapp_admin', 'Ayarlanmamış')) . '</small>';
+                    } else {
+                        echo '<span style="color: red;">❌ Devre Dışı</span>';
+                    }
+                    ?>
+                </td>
+            </tr>
         </table>
     </div>
 </div>
@@ -190,4 +278,64 @@
 .notice {
     margin: 5px 0 15px;
 }
+
+.whatsapp-test-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.whatsapp-test-section h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+#whatsapp-test-result {
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+}
+
+#whatsapp-test-result.success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    display: block;
+}
+
+#whatsapp-test-result.error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    display: block;
+}
 </style>
+
+<script>
+jQuery(document).ready(function($) {
+    $('#test-whatsapp').on('click', function() {
+        const $button = $(this);
+        const $result = $('#whatsapp-test-result');
+        
+        $button.prop('disabled', true).text('📤 Gönderiliyor...');
+        $result.removeClass('success error').hide();
+        
+        $.post(ajaxurl, {
+            action: 'test_whatsapp_message',
+            nonce: '<?php echo wp_create_nonce('morpheo_admin_nonce'); ?>'
+        }, function(response) {
+            if (response.success) {
+                $result.addClass('success').html('✅ Test mesajı başarıyla gönderildi!<br><small>' + response.data.message + '</small>').show();
+            } else {
+                $result.addClass('error').html('❌ Test mesajı gönderilemedi:<br><small>' + response.data.message + '</small>').show();
+            }
+        }).fail(function() {
+            $result.addClass('error').html('❌ AJAX hatası oluştu.').show();
+        }).always(function() {
+            $button.prop('disabled', false).text('📱 Test Mesajı Gönder');
+        });
+    });
+});
+</script>

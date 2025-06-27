@@ -1,948 +1,768 @@
 ;(($) => {
-  // Calculator state
   let currentStep = 1
-  const calculatorData = {
-    purpose: "",
-    businessType: "",
-    onlinePayment: "",
-    contactMethods: [],
-    websiteType: "",
-    pageCount: 3,
-    selectedPages: [],
-    features: [],
-    designComplexity: "",
-    userData: {},
-    recommendation: null,
-  }
+  const totalSteps = 6
+  let calculatorData = {}
+  let selectedDate = null
+  let selectedTime = null
+  const morpheo_ajax = window.morpheo_ajax // Declare morpheo_ajax variable
 
-  // Website types with prices
-  const websiteTypes = {
-    corporate: { name: "Kurumsal Website", basePrice: 15000 },
-    ecommerce: { name: "E-Ticaret Sitesi", basePrice: 25000 },
-    blog: { name: "Blog/İçerik Sitesi", basePrice: 8000 },
-    landing: { name: "Özel Kampanya Sayfası", basePrice: 5000 },
-  }
-
-  // Feature prices
-  const featurePrices = {
-    seo: 3000,
-    cms: 5000,
-    multilang: 4000,
-    payment: 6000,
-  }
-
-  // Design multipliers
-  const designMultipliers = {
-    basic: 1,
-    custom: 1.5,
-    premium: 2,
-  }
-
-  // Recommendation logic
-  const recommendationRules = {
-    "sell-products": {
-      yes: "ecommerce",
-      maybe: "corporate",
-      no: "corporate",
-    },
-    "showcase-business": {
-      yes: "ecommerce",
-      maybe: "corporate",
-      no: "corporate",
-    },
-    "share-content": {
-      yes: "blog",
-      maybe: "blog",
-      no: "blog",
-    },
-    "single-campaign": {
-      yes: "landing",
-      maybe: "landing",
-      no: "landing",
-    },
-    "not-sure": {
-      yes: "ecommerce",
-      maybe: "corporate",
-      no: "corporate",
-    },
-  }
-
-  // Initialize calculator
   $(document).ready(() => {
     initializeCalculator()
-    bindEvents()
-    loadTheme()
-    generateAppointmentDates()
+    setupEventListeners()
+    updateProgress()
   })
 
   function initializeCalculator() {
-    updateProgress()
-    updateStepContent()
+    // Initialize theme
+    const savedTheme = localStorage.getItem("morpheo-calculator-theme") || "dark"
+    $(".morpheo-calculator").addClass(savedTheme + "-theme")
+    updateThemeIcon(savedTheme)
+
+    // Initialize first step
+    showStep(1)
+
+    // Initialize range sliders
+    $(".range-slider").each(function () {
+      updateRangeValue(this)
+    })
   }
 
-  function bindEvents() {
+  function setupEventListeners() {
     // Theme toggle
-    $("#theme-toggle").on("click", toggleTheme)
-
-    // Purpose selection
-    $(".purpose-option").on("click", function () {
-      $(".purpose-option").removeClass("selected")
-      $(this).addClass("selected")
-      calculatorData.purpose = $(this).data("purpose")
-      hideErrorMessage(1)
-    })
-
-    // Business type selection
-    $('input[name="business-type"]').on("change", function () {
-      calculatorData.businessType = $(this).val()
-      hideErrorMessage(2)
-    })
-
-    // Online payment selection
-    $('input[name="online-payment"]').on("change", function () {
-      calculatorData.onlinePayment = $(this).val()
-      hideErrorMessage(2)
-    })
-
-    // Contact methods
-    $('input[name="contact-method"]').on("change", function () {
-      const method = $(this).val()
-      if ($(this).is(":checked")) {
-        calculatorData.contactMethods.push(method)
-      } else {
-        calculatorData.contactMethods = calculatorData.contactMethods.filter((m) => m !== method)
-      }
-    })
-
-    // Website type selection (alternative options)
-    $(".website-type-option").on("click", function () {
-      $(".website-type-option").removeClass("selected")
-      $(this).addClass("selected")
-      calculatorData.websiteType = $(this).data("type")
-      hideErrorMessage(3)
-    })
-
-    // Page selection
-    $('input[name="pages"]').on("change", function () {
-      const page = $(this).val()
-      if ($(this).is(":checked")) {
-        calculatorData.selectedPages.push(page)
-      } else {
-        calculatorData.selectedPages = calculatorData.selectedPages.filter((p) => p !== page)
-      }
-      updatePageCount()
-    })
-
-    // Design complexity
-    $('input[name="design"]').on("change", function () {
-      calculatorData.designComplexity = $(this).val()
-      $(".design-option").removeClass("selected")
-      $(this).closest(".design-option").addClass("selected")
-      hideErrorMessage(5)
-    })
-
-    // Features checkboxes
-    $('.feature-card input[type="checkbox"]').on("change", function () {
-      const featureId = $(this).val()
-      const featureCard = $(this).closest(".feature-card")
-
-      if ($(this).is(":checked")) {
-        calculatorData.features.push(featureId)
-        featureCard.addClass("selected")
-      } else {
-        calculatorData.features = calculatorData.features.filter((f) => f !== featureId)
-        featureCard.removeClass("selected")
-      }
-    })
-
-    // Contact form inputs
-    $("#first-name, #last-name, #email, #phone").on("input", () => {
-      hideErrorMessage(6)
-    })
+    $(".theme-toggle").on("click", toggleTheme)
 
     // Navigation buttons
-    $("#prev-btn").on("click", previousStep)
-    $("#next-btn").on("click", nextStep)
+    $(".btn-next").on("click", nextStep)
+    $(".btn-prev").on("click", prevStep)
+    $(".btn-calculate").on("click", calculatePrice)
+    $(".btn-book-appointment").on("click", showAppointmentModal)
+
+    // Form inputs
+    $(".option-card").on("click", selectOption)
+    $(".feature-item").on("click", toggleFeature)
+    $(".range-slider").on("input", function () {
+      updateRangeValue(this)
+    })
 
     // Modal events
-    $(".modal-close").on("click", closeModal)
-    $("#book-appointment-btn").on("click", (e) => {
-      e.preventDefault()
-      showAppointmentModal()
-    })
-    $("#appointment-date").on("change", loadTimeSlots)
-    $(document).on("click", ".time-slot:not(.disabled)", selectTimeSlot)
-    $("#confirm-appointment-btn").on("click", confirmAppointment)
-
-    // Close modal on outside click
-    $(".modal").on("click", function (e) {
+    $(".modal-close, .appointment-modal").on("click", function (e) {
       if (e.target === this) {
-        closeModal()
+        closeAppointmentModal()
       }
     })
+
+    // Calendar and time selection
+    $(document).on("click", ".calendar-day:not(.disabled)", selectDate)
+    $(document).on("click", ".time-slot:not(.disabled)", selectTime)
+    $(document).on("click", ".btn-confirm-appointment", confirmAppointment)
+
+    // Contact form
+    $(".contact-form").on("submit", handleContactSubmit)
   }
 
-  function updatePageCount() {
-    const basePages = 3 // Ana sayfa, Hakkımızda, İletişim
-    const additionalPages = calculatorData.selectedPages.length
-    calculatorData.pageCount = basePages + additionalPages
-    $("#page-count-display").text(calculatorData.pageCount)
-  }
+  function showStep(step) {
+    $(".calculator-step").removeClass("active")
+    $('.calculator-step[data-step="' + step + '"]').addClass("active")
+    currentStep = step
+    updateProgress()
 
-  function generateRecommendation() {
-    if (!calculatorData.purpose || !calculatorData.onlinePayment) {
-      return null
-    }
-
-    const recommendedType = recommendationRules[calculatorData.purpose][calculatorData.onlinePayment]
-    calculatorData.websiteType = recommendedType
-
-    return {
-      type: recommendedType,
-      confidence: "high",
-      reasoning: getRecommendationReasoning(
-        calculatorData.purpose,
-        calculatorData.onlinePayment,
-        calculatorData.businessType,
-      ),
-    }
-  }
-
-  function getRecommendationReasoning(purpose, payment, businessType) {
-    const reasons = {
-      "sell-products": {
-        yes: `Online ürün satışı yapmak istediğiniz için <strong>E-Ticaret Sitesi</strong> en uygun seçenek. Ürünlerinizi sergileyebilir, stok takibi yapabilir ve güvenli ödeme alabilirsiniz.`,
-        maybe: `Şimdilik online ödeme almayacağınız için <strong>Kurumsal Website</strong> ile başlayıp, ileride e-ticaret özelliklerini ekleyebiliriz.`,
-        no: `Ürünlerinizi tanıtmak için <strong>Kurumsal Website</strong> ideal. Müşteriler ürünlerinizi görüp telefon/mail ile sipariş verebilir.`,
-      },
-      "showcase-business": {
-        yes: `Hizmet satışı yapacağınız için <strong>E-Ticaret Sitesi</strong> öneriyoruz. Hizmet paketlerinizi satabilir, randevu sistemi ekleyebiliriz.`,
-        maybe: `<strong>Kurumsal Website</strong> ile işinizi profesyonelce tanıtabilir, ileride online ödeme sistemi ekleyebiliriz.`,
-        no: `İşinizi tanıtmak için <strong>Kurumsal Website</strong> mükemmel. Hizmetlerinizi, referanslarınızı gösterip müşteri çekebilirsiniz.`,
-      },
-      "share-content": {
-        yes: `İçerik paylaşımından gelir elde etmek için <strong>Blog/İçerik Sitesi</strong> ideal. Reklam, sponsorluk veya premium içerik satabilirsiniz.`,
-        maybe: `<strong>Blog/İçerik Sitesi</strong> ile başlayıp, ileride monetizasyon seçeneklerini değerlendirebiliriz.`,
-        no: `İçerik paylaşımı için <strong>Blog/İçerik Sitesi</strong> en uygun. SEO ile Google'da üst sıralarda çıkabilirsiniz.`,
-      },
-      "single-campaign": {
-        yes: `Tek ürün/hizmet satışı için <strong>Özel Kampanya Sayfası</strong> en etkili. Odaklanmış tasarım ile dönüşüm oranınız yüksek olur.`,
-        maybe: `<strong>Özel Kampanya Sayfası</strong> ile başlayıp, ileride ödeme sistemi ekleyebiliriz.`,
-        no: `Kampanyanızı tanıtmak için <strong>Özel Kampanya Sayfası</strong> ideal. Tek sayfada tüm bilgileri verebilirsiniz.`,
-      },
-      "not-sure": {
-        yes: `Henüz net karar vermediğiniz için <strong>E-Ticaret Sitesi</strong> öneriyoruz. Hem tanıtım hem satış yapabilirsiniz.`,
-        maybe: `<strong>Kurumsal Website</strong> ile başlamanızı öneriyoruz. Esnek yapısı sayesinde ileride her türlü özelliği ekleyebiliriz.`,
-        no: `<strong>Kurumsal Website</strong> en güvenli seçenek. İşinizi tanıtır, ileride ihtiyaçlarınıza göre geliştirebiliriz.`,
-      },
-    }
-
-    return reasons[purpose][payment] || "Size uygun çözümü birlikte belirleyelim."
-  }
-
-  function showRecommendation() {
-    const recommendation = generateRecommendation()
-    if (!recommendation) return
-
-    const websiteType = websiteTypes[recommendation.type]
-    const recommendationHtml = `
-      <div class="recommended-card">
-        <div class="recommendation-badge">
-          <span>🎯 Size Özel Öneri</span>
-        </div>
-        <div class="recommendation-content">
-          <div class="recommendation-type">
-            <h3>${websiteType.name}</h3>
-            <div class="recommendation-price">
-              ${websiteType.basePrice.toLocaleString("tr-TR")} ₺'den başlayan fiyatlarla
-            </div>
-          </div>
-          <div class="recommendation-reasoning">
-            <p>${recommendation.reasoning}</p>
-          </div>
-          <div class="recommendation-features">
-            <h4>Bu çözümde neler var?</h4>
-            <ul id="recommendation-features-list">
-              ${getRecommendationFeatures(recommendation.type)}
-            </ul>
-          </div>
-        </div>
-      </div>
-    `
-
-    $("#recommended-solution").html(recommendationHtml)
-
-    // Auto-select the recommended option
-    $(`.website-type-option[data-type="${recommendation.type}"]`).addClass("selected")
-  }
-
-  function getRecommendationFeatures(type) {
-    const features = {
-      corporate: [
-        "Profesyonel kurumsal tasarım",
-        "Mobil uyumlu responsive yapı",
-        "İletişim formları",
-        "Google harita entegrasyonu",
-        "Sosyal medya bağlantıları",
-        "Temel SEO optimizasyonu",
-      ],
-      ecommerce: [
-        "Ürün katalog sistemi",
-        "Sepet ve ödeme sistemi",
-        "Stok takip sistemi",
-        "Müşteri hesap paneli",
-        "Sipariş yönetimi",
-        "Kargo entegrasyonu",
-      ],
-      blog: [
-        "İçerik yönetim sistemi",
-        "Kategori ve etiket sistemi",
-        "Yorum sistemi",
-        "Sosyal medya paylaşım",
-        "SEO optimizasyonu",
-        "E-bülten sistemi",
-      ],
-      landing: [
-        "Tek sayfa odaklanmış tasarım",
-        "Yüksek dönüşüm optimizasyonu",
-        "İletişim formları",
-        "Sosyal kanıt alanları",
-        "Hızlı yükleme",
-        "Mobil optimizasyon",
-      ],
-    }
-
-    return features[type].map((feature) => `<li>✅ ${feature}</li>`).join("")
-  }
-
-  function showErrorMessage(step, message) {
-    const errorEl = $(`#step-${step}-error`)
-    errorEl.text(message).removeClass("hidden")
-    errorEl[0].scrollIntoView({ behavior: "smooth", block: "center" })
-  }
-
-  function hideErrorMessage(step) {
-    $(`#step-${step}-error`).addClass("hidden").text("")
+    // Scroll to top of calculator
+    $(".morpheo-calculator")[0].scrollIntoView({ behavior: "smooth" })
   }
 
   function updateProgress() {
-    const progress = (currentStep / 6) * 100
-    $("#progress-fill").css("width", progress + "%")
-    $("#current-step").text(`Adım ${currentStep} / 6`)
-    $("#progress-percent").text(`${Math.round(progress)}% Tamamlandı`)
-  }
-
-  function updateStepContent() {
-    const stepTitles = {
-      1: "Adım 1: Web Sitenizin Amacı Nedir?",
-      2: "Adım 2: İşiniz Hakkında Bilgi",
-      3: "Adım 3: Size Özel Öneri",
-      4: "Adım 4: Sayfa İçerikleri",
-      5: "Adım 5: Tasarım ve Özellikler",
-      6: "Adım 6: İletişim Bilgileri",
-    }
-
-    const stepDescriptions = {
-      1: "Web sitenizle ne yapmak istediğinizi anlayalım",
-      2: "İşinizin detaylarını öğrenelim",
-      3: "Size en uygun çözümü belirleyelim",
-      4: "Hangi sayfaların olacağını planlayalım",
-      5: "Sitenizin görünümünü ve özelliklerini seçelim",
-      6: "Kişisel teklifinizi hazırlayalım",
-    }
-
-    $("#step-title").text(stepTitles[currentStep])
-    $("#step-description").text(stepDescriptions[currentStep])
-
-    // Show/hide step content
-    $(".step-content").addClass("hidden")
-    $(`#step-${currentStep}`).removeClass("hidden")
-
-    // Hide all error messages when changing steps
-    for (let i = 1; i <= 6; i++) {
-      hideErrorMessage(i)
-    }
-
-    // Update navigation buttons
-    $("#prev-btn").prop("disabled", currentStep === 1)
-    $("#next-btn").text(currentStep === 6 ? "Teklifimi Hazırla 🎯" : "İleri →")
-
-    // Special handling for step 3 (recommendation)
-    if (currentStep === 3) {
-      showRecommendation()
-    }
+    const progress = ((currentStep - 1) / (totalSteps - 1)) * 100
+    $(".progress-fill").css("width", progress + "%")
+    $(".progress-text").text(`Adım ${currentStep} / ${totalSteps}`)
   }
 
   function nextStep() {
-    if (!validateCurrentStep()) {
-      return
-    }
-
-    if (currentStep < 6) {
-      currentStep++
-      updateProgress()
-      updateStepContent()
-    } else {
-      // Calculate and show price
-      collectUserData()
-      calculateAndShowPrice()
+    if (validateCurrentStep()) {
+      if (currentStep < totalSteps) {
+        showStep(currentStep + 1)
+      }
     }
   }
 
-  function previousStep() {
+  function prevStep() {
     if (currentStep > 1) {
-      currentStep--
-      updateProgress()
-      updateStepContent()
+      showStep(currentStep - 1)
     }
   }
 
   function validateCurrentStep() {
-    switch (currentStep) {
-      case 1:
-        if (!calculatorData.purpose) {
-          showErrorMessage(1, "Lütfen web sitenizin amacını seçin.")
+    const currentStepElement = $('.calculator-step[data-step="' + currentStep + '"]')
+
+    // Check required radio buttons
+    const requiredRadios = currentStepElement.find('input[type="radio"][required]')
+    if (requiredRadios.length > 0) {
+      let hasSelection = false
+      requiredRadios.each(function () {
+        if ($(this).is(":checked")) {
+          hasSelection = true
           return false
         }
-        return true
-
-      case 2:
-        if (!calculatorData.businessType) {
-          showErrorMessage(2, "Lütfen işletme türünüzü seçin.")
-          return false
-        }
-        if (!calculatorData.onlinePayment) {
-          showErrorMessage(2, "Lütfen online ödeme tercihinizi belirtin.")
-          return false
-        }
-        return true
-
-      case 3:
-        if (!calculatorData.websiteType) {
-          showErrorMessage(3, "Lütfen bir web sitesi türü seçin.")
-          return false
-        }
-        return true
-
-      case 4:
-        // Page selection is optional, always valid
-        return true
-
-      case 5:
-        if (!calculatorData.designComplexity) {
-          showErrorMessage(5, "Lütfen tasarım yaklaşımını seçin.")
-          return false
-        }
-        return true
-
-      case 6:
-        const firstName = $("#first-name").val().trim()
-        const lastName = $("#last-name").val().trim()
-        const email = $("#email").val().trim()
-        const phone = $("#phone").val().trim()
-
-        if (!firstName) {
-          showErrorMessage(6, "Lütfen adınızı girin.")
-          $("#first-name").focus()
-          return false
-        }
-
-        if (!lastName) {
-          showErrorMessage(6, "Lütfen soyadınızı girin.")
-          $("#last-name").focus()
-          return false
-        }
-
-        if (!email) {
-          showErrorMessage(6, "Lütfen e-posta adresinizi girin.")
-          $("#email").focus()
-          return false
-        }
-
-        if (!isValidEmail(email)) {
-          showErrorMessage(6, "Lütfen geçerli bir e-posta adresi girin.")
-          $("#email").focus()
-          return false
-        }
-
-        if (!phone) {
-          showErrorMessage(6, "Lütfen telefon numaranızı girin.")
-          $("#phone").focus()
-          return false
-        }
-
-        if (!isValidPhone(phone)) {
-          showErrorMessage(6, "Lütfen geçerli bir telefon numarası girin.")
-          $("#phone").focus()
-          return false
-        }
-
-        return true
-
-      default:
+      })
+      if (!hasSelection) {
+        alert("Lütfen bir seçenek seçin.")
         return false
+      }
     }
+
+    // Check required inputs
+    const requiredInputs = currentStepElement.find("input[required], select[required]")
+    for (let i = 0; i < requiredInputs.length; i++) {
+      const input = requiredInputs[i]
+      if (!input.value.trim()) {
+        alert("Lütfen tüm gerekli alanları doldurun.")
+        input.focus()
+        return false
+      }
+    }
+
+    return true
   }
 
-  function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
+  function selectOption() {
+    const $card = $(this)
+    const $radio = $card.find('input[type="radio"]')
+
+    // Remove selection from siblings
+    $card.siblings().removeClass("selected")
+
+    // Add selection to current card
+    $card.addClass("selected")
+    $radio.prop("checked", true)
   }
 
-  function isValidPhone(phone) {
-    const phoneRegex = /^(\+90|0)?[5][0-9]{9}$/
-    const cleanPhone = phone.replace(/[\s\-$$$$]/g, "")
-    return phoneRegex.test(cleanPhone) || cleanPhone.length >= 10
+  function toggleFeature() {
+    const $item = $(this)
+    const $checkbox = $item.find('input[type="checkbox"]')
+
+    $item.toggleClass("selected")
+    $checkbox.prop("checked", !$checkbox.prop("checked"))
   }
 
-  function collectUserData() {
-    calculatorData.userData = {
-      firstName: $("#first-name").val().trim(),
-      lastName: $("#last-name").val().trim(),
-      email: $("#email").val().trim(),
-      phone: $("#phone").val().trim(),
-      company: $("#company").val().trim(),
-      city: $("#city").val().trim(),
+  function updateRangeValue(slider) {
+    const $slider = $(slider)
+    const value = $slider.val()
+    const $valueDisplay = $slider.siblings(".range-value")
+
+    if ($slider.attr("id") === "page-count") {
+      $valueDisplay.text(value + " sayfa")
+    } else {
+      $valueDisplay.text(value)
     }
   }
 
   function calculatePrice() {
-    const basePrice = websiteTypes[calculatorData.websiteType].basePrice
-    const pagePrice = Math.max(0, calculatorData.pageCount - 5) * 500
+    // Show loading animation
+    showLoadingAnimation()
 
-    // Calculate features price
-    let featuresPrice = 0
-    calculatorData.features.forEach((feature) => {
-      featuresPrice += featurePrices[feature] || 0
-    })
+    // Collect form data
+    collectFormData()
 
-    // Apply design multiplier
-    const designMultiplier = designMultipliers[calculatorData.designComplexity] || 1
+    // Simulate calculation process with realistic timing
+    const steps = [
+      { text: "📊 Proje türü analiz ediliyor...", delay: 800 },
+      { text: "📄 Sayfa sayısı hesaplanıyor...", delay: 600 },
+      { text: "🎨 Tasarım karmaşıklığı değerlendiriliyor...", delay: 900 },
+      { text: "⚙️ Özellikler analiz ediliyor...", delay: 700 },
+      { text: "💰 Fiyat aralığı belirleniyor...", delay: 1000 },
+    ]
 
-    const subtotal = (basePrice + pagePrice + featuresPrice) * designMultiplier
+    let currentStepIndex = 0
+    let totalProgress = 0
 
-    // Calculate price range (±15% to +25%)
-    const minPrice = Math.ceil((subtotal * 0.85) / 1000) * 1000
-    const maxPrice = Math.ceil((subtotal * 1.25) / 1000) * 1000
+    function processNextStep() {
+      if (currentStepIndex < steps.length) {
+        const step = steps[currentStepIndex]
 
-    return {
-      minPrice,
-      maxPrice,
-      breakdown: {
-        basePrice,
-        pagePrice,
-        featuresPrice,
-        designMultiplier,
-        subtotal,
-      },
-    }
-  }
+        // Update current step
+        $(".loading-step").removeClass("active completed")
+        $(".loading-step").eq(currentStepIndex).addClass("active")
 
-  // Update the calculateAndShowPrice function to include loading animation
-
-  function calculateAndShowPrice() {
-    // Show loading overlay
-    showLoadingOverlay()
-
-    // Simulate calculation steps with delays for better UX
-    setTimeout(() => {
-      updateCalculationStep(1, "active")
-
-      setTimeout(() => {
-        updateCalculationStep(1, "completed")
-        updateCalculationStep(2, "active")
+        // Update progress
+        totalProgress = ((currentStepIndex + 1) / steps.length) * 100
+        $(".loading-progress-bar").css("width", totalProgress + "%")
 
         setTimeout(() => {
-          updateCalculationStep(2, "completed")
-          updateCalculationStep(3, "active")
+          // Mark current step as completed
+          $(".loading-step").eq(currentStepIndex).removeClass("active").addClass("completed")
+          $(".loading-step").eq(currentStepIndex).find(".loading-step-icon").text("✅")
 
-          setTimeout(() => {
-            updateCalculationStep(3, "completed")
-            updateCalculationStep(4, "active")
-
-            setTimeout(() => {
-              updateCalculationStep(4, "completed")
-
-              // Actually calculate the price
-              const price = calculatePrice()
-
-              // Save data to database
-              saveCalculatorData(price)
-
-              setTimeout(() => {
-                // Hide loading and show price modal
-                hideLoadingOverlay()
-                showPriceModal(price)
-              }, 500)
-            }, 800)
-          }, 600)
-        }, 700)
-      }, 500)
-    }, 300)
-  }
-
-  function showLoadingOverlay() {
-    const loadingHtml = `
-    <div id="loading-overlay" class="loading-overlay">
-      <div class="loading-content">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">
-          Teklifiniz Hazırlanıyor<span class="loading-dots"></span>
-        </div>
-        <div class="loading-description">
-          Size özel fiyat hesaplaması yapılıyor
-        </div>
-        
-        <div class="calculation-steps">
-          <div class="calculation-step" id="step-1">
-            <span class="step-icon">📊</span>
-            <span>Proje türü analiz ediliyor</span>
-          </div>
-          <div class="calculation-step" id="step-2">
-            <span class="step-icon">📄</span>
-            <span>Sayfa sayısı hesaplanıyor</span>
-          </div>
-          <div class="calculation-step" id="step-3">
-            <span class="step-icon">🎨</span>
-            <span>Tasarım karmaşıklığı değerlendiriliyor</span>
-          </div>
-          <div class="calculation-step" id="step-4">
-            <span class="step-icon">💰</span>
-            <span>Fiyat aralığı belirleniyor</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
-
-    $("body").append(loadingHtml)
-
-    // Reset all steps
-    $(".calculation-step").removeClass("active completed")
-  }
-
-  function hideLoadingOverlay() {
-    $("#loading-overlay").addClass("hidden")
-    setTimeout(() => {
-      $("#loading-overlay").remove()
-    }, 300)
-  }
-
-  function updateCalculationStep(stepNumber, status) {
-    const step = $(`#step-${stepNumber}`)
-
-    if (status === "active") {
-      step.addClass("active").removeClass("completed")
-    } else if (status === "completed") {
-      step.removeClass("active").addClass("completed")
-      step.find(".step-icon").html("✅")
-    }
-  }
-
-  function showPriceModal(price) {
-    // Price summary
-    const websiteType = websiteTypes[calculatorData.websiteType]
-    const summaryHtml = `
-      <div class="price-summary-content">
-        <div class="selected-solution">
-          <h3>📋 Seçtiğiniz Çözüm</h3>
-          <div class="solution-details">
-            <div class="solution-type">${websiteType.name}</div>
-            <div class="solution-features">
-              <span>${calculatorData.pageCount} sayfa</span>
-              <span>${calculatorData.designComplexity === "basic" ? "Profesyonel" : calculatorData.designComplexity === "custom" ? "Özel" : "Premium"} tasarım</span>
-              ${calculatorData.features.length > 0 ? `<span>${calculatorData.features.length} ek özellik</span>` : ""}
-            </div>
-          </div>
-        </div>
-      </div>
-    `
-    $("#price-summary").html(summaryHtml)
-
-    // Price breakdown
-    const breakdownHtml = `
-      <div class="price-breakdown-content">
-        <h4>💰 Fiyat Detayları</h4>
-        <div class="breakdown-items">
-          <div class="breakdown-item">
-            <span>Temel ${websiteType.name}</span>
-            <span>${price.breakdown.basePrice.toLocaleString("tr-TR")} ₺</span>
-          </div>
-          ${
-            price.breakdown.pagePrice > 0
-              ? `
-            <div class="breakdown-item">
-              <span>Ek sayfalar (${calculatorData.pageCount - 5} sayfa)</span>
-              <span>${price.breakdown.pagePrice.toLocaleString("tr-TR")} ₺</span>
-            </div>
-          `
-              : ""
-          }
-          ${
-            price.breakdown.featuresPrice > 0
-              ? `
-            <div class="breakdown-item">
-              <span>Ek özellikler</span>
-              <span>${price.breakdown.featuresPrice.toLocaleString("tr-TR")} ₺</span>
-            </div>
-          `
-              : ""
-          }
-          ${
-            price.breakdown.designMultiplier > 1
-              ? `
-            <div class="breakdown-item">
-              <span>Tasarım ek ücreti (%${Math.round((price.breakdown.designMultiplier - 1) * 100)})</span>
-              <span>${(price.breakdown.subtotal - (price.breakdown.basePrice + price.breakdown.pagePrice + price.breakdown.featuresPrice)).toLocaleString("tr-TR")} ₺</span>
-            </div>
-          `
-              : ""
-          }
-        </div>
-      </div>
-    `
-    $("#price-breakdown").html(breakdownHtml)
-
-    // Show price range
-    $("#price-range").text(`${price.minPrice.toLocaleString("tr-TR")} - ${price.maxPrice.toLocaleString("tr-TR")} ₺`)
-
-    $("#price-modal").removeClass("hidden")
-  }
-
-  function saveCalculatorData(price) {
-    const data = {
-      action: "save_calculator_data",
-      nonce: window.morpheo_ajax.nonce,
-      website_type: calculatorData.websiteType,
-      page_count: calculatorData.pageCount,
-      features: JSON.stringify(calculatorData.features),
-      design_complexity: calculatorData.designComplexity,
-      timeline: "standard", // Default timeline
-      technical_seo: calculatorData.features.includes("seo") ? "basic" : "none",
-      management_features: JSON.stringify([]),
-      security_features: JSON.stringify([]),
-      ecommerce_modules: JSON.stringify([]),
-      first_name: calculatorData.userData.firstName,
-      last_name: calculatorData.userData.lastName,
-      email: calculatorData.userData.email,
-      phone: calculatorData.userData.phone,
-      company: calculatorData.userData.company,
-      city: calculatorData.userData.city,
-      min_price: price.minPrice,
-      max_price: price.maxPrice,
-    }
-
-    $.post(window.morpheo_ajax.ajax_url, data, (response) => {
-      if (response.success) {
-        calculatorData.calculatorId = response.data.id
+          currentStepIndex++
+          processNextStep()
+        }, step.delay)
       } else {
-        console.error("Failed to save calculator data", response.data)
+        // All steps completed, calculate and show results
+        setTimeout(() => {
+          const pricing = calculatePricing()
+          hideLoadingAnimation()
+          showResults(pricing)
+        }, 500)
       }
-    })
+    }
+
+    processNextStep()
   }
 
-  function toggleTheme() {
-    const container = $(".morpheo-calculator-container")
-    container.toggleClass("dark-mode")
-    const isDarkMode = container.hasClass("dark-mode")
-    localStorage.setItem("morpheo_theme", isDarkMode ? "dark" : "light")
+  function showLoadingAnimation() {
+    const loadingHTML = `
+            <div class="loading-overlay">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-title">💡 Teklifiniz Hazırlanıyor</div>
+                    <ul class="loading-steps">
+                        <li class="loading-step">
+                            <span class="loading-step-icon">📊</span>
+                            <span>Proje türü analiz ediliyor...</span>
+                        </li>
+                        <li class="loading-step">
+                            <span class="loading-step-icon">📄</span>
+                            <span>Sayfa sayısı hesaplanıyor...</span>
+                        </li>
+                        <li class="loading-step">
+                            <span class="loading-step-icon">🎨</span>
+                            <span>Tasarım karmaşıklığı değerlendiriliyor...</span>
+                        </li>
+                        <li class="loading-step">
+                            <span class="loading-step-icon">⚙️</span>
+                            <span>Özellikler analiz ediliyor...</span>
+                        </li>
+                        <li class="loading-step">
+                            <span class="loading-step-icon">💰</span>
+                            <span>Fiyat aralığı belirleniyor...</span>
+                        </li>
+                    </ul>
+                    <div class="loading-progress">
+                        <div class="loading-progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+        `
+
+    $("body").append(loadingHTML)
+    setTimeout(() => {
+      $(".loading-overlay").addClass("active")
+    }, 100)
   }
 
-  function loadTheme() {
-    const savedTheme = localStorage.getItem("morpheo_theme")
-    const container = $(".morpheo-calculator-container")
-    if (savedTheme === "light") {
-      container.removeClass("dark-mode")
-    } else {
-      container.addClass("dark-mode")
+  function hideLoadingAnimation() {
+    $(".loading-overlay").removeClass("active")
+    setTimeout(() => {
+      $(".loading-overlay").remove()
+    }, 300)
+  }
+
+  function collectFormData() {
+    calculatorData = {
+      website_type: $('input[name="website_type"]:checked').val(),
+      page_count: $("#page-count").val(),
+      features: getSelectedFeatures(),
+      design_complexity: $('input[name="design_complexity"]:checked').val(),
+      timeline: $('input[name="timeline"]:checked').val(),
+      technical_seo: $('input[name="technical_seo"]:checked').val(),
+      management_features: $('input[name="management_features"]:checked').val(),
+      security_features: $('input[name="security_features"]:checked').val(),
+      ecommerce_modules: $('input[name="ecommerce_modules"]:checked').val(),
+      first_name: $("#first_name").val(),
+      last_name: $("#last_name").val(),
+      email: $("#email").val(),
+      phone: $("#phone").val(),
+      company: $("#company").val(),
+      city: $("#city").val(),
     }
   }
 
-  function closeModal() {
-    $(".modal").addClass("hidden")
+  function getSelectedFeatures() {
+    const features = []
+    $('.feature-item input[type="checkbox"]:checked').each(function () {
+      features.push($(this).val())
+    })
+    return JSON.stringify(features)
+  }
+
+  function calculatePricing() {
+    let basePrice = 0
+    let multiplier = 1
+
+    // Base price by website type
+    const websiteTypePrices = {
+      corporate: 8000,
+      ecommerce: 15000,
+      blog: 5000,
+      landing: 3000,
+    }
+
+    basePrice = websiteTypePrices[calculatorData.website_type] || 8000
+
+    // Page count multiplier
+    const pageCount = Number.parseInt(calculatorData.page_count)
+    if (pageCount <= 5) {
+      multiplier *= 1
+    } else if (pageCount <= 10) {
+      multiplier *= 1.3
+    } else if (pageCount <= 20) {
+      multiplier *= 1.6
+    } else {
+      multiplier *= 2
+    }
+
+    // Design complexity multiplier
+    const designMultipliers = {
+      basic: 1,
+      custom: 1.5,
+      premium: 2.2,
+    }
+    multiplier *= designMultipliers[calculatorData.design_complexity] || 1
+
+    // Features additional cost
+    const features = JSON.parse(calculatorData.features)
+    let additionalCost = 0
+    const featureCosts = {
+      seo: 2000,
+      cms: 1500,
+      multilang: 3000,
+      payment: 2500,
+      booking: 2000,
+      analytics: 1000,
+    }
+
+    features.forEach((feature) => {
+      additionalCost += featureCosts[feature] || 0
+    })
+
+    // Timeline multiplier
+    const timelineMultipliers = {
+      urgent: 1.5,
+      normal: 1,
+      flexible: 0.9,
+    }
+    multiplier *= timelineMultipliers[calculatorData.timeline] || 1
+
+    // Calculate final prices
+    const finalBasePrice = Math.round(basePrice * multiplier)
+    const minPrice = finalBasePrice + additionalCost
+    const maxPrice = Math.round(minPrice * 1.3)
+
+    return {
+      min_price: minPrice,
+      max_price: maxPrice,
+      base_price: finalBasePrice,
+      additional_cost: additionalCost,
+      features: features,
+    }
+  }
+
+  function showResults(pricing) {
+    calculatorData.min_price = pricing.min_price
+    calculatorData.max_price = pricing.max_price
+
+    // Update results display
+    $(".price-range").text(
+      new Intl.NumberFormat("tr-TR").format(pricing.min_price) +
+        " - " +
+        new Intl.NumberFormat("tr-TR").format(pricing.max_price) +
+        " ₺",
+    )
+
+    // Show results step
+    showStep(totalSteps)
+
+    // Save data to database
+    saveCalculatorData()
+  }
+
+  function saveCalculatorData() {
+    $.ajax({
+      url: morpheo_ajax.ajax_url,
+      type: "POST",
+      data: {
+        action: "save_calculator_data",
+        nonce: morpheo_ajax.nonce,
+        ...calculatorData,
+      },
+      success: (response) => {
+        if (response.success) {
+          calculatorData.id = response.data.id
+          console.log("Calculator data saved successfully")
+        } else {
+          console.error("Failed to save calculator data:", response.data.message)
+        }
+      },
+      error: (xhr, status, error) => {
+        console.error("AJAX error:", error)
+      },
+    })
   }
 
   function showAppointmentModal() {
-    $("#price-modal").addClass("hidden")
-
-    // Konsültasyon ücretini göster
-    $("#consultation-fee").text(window.morpheo_ajax.consultation_fee || "250")
-
-    if ($("#appointment-date option").length <= 1) {
-      generateAppointmentDates()
-    }
-    $("#appointment-modal").removeClass("hidden")
-  }
-
-  function generateAppointmentDates() {
-    const dateSelect = $("#appointment-date")
-    dateSelect.find("option:not(:first)").remove()
-    const today = new Date()
-
-    for (let i = 1; i <= 14; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      if (date.getDay() !== 0 && date.getDay() !== 6) {
-        const dateStr = date.toISOString().split("T")[0]
-        const displayDate = date.toLocaleDateString("tr-TR", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-        dateSelect.append(`<option value="${dateStr}">${displayDate}</option>`)
-      }
-    }
-  }
-
-  function loadTimeSlots() {
-    const selectedDate = $("#appointment-date").val()
-    const timeSlots = $("#time-slots")
-
-    if (!selectedDate) {
-      timeSlots.empty()
+    if (!calculatorData.id) {
+      alert("Lütfen önce fiyat hesaplamasını tamamlayın.")
       return
     }
 
-    timeSlots.html('<div class="loading">Müsait saatler yükleniyor...</div>')
+    const modalHTML = `
+            <div class="appointment-modal">
+                <div class="modal-content">
+                    <button class="modal-close">&times;</button>
+                    <h3>📅 Ücretsiz Konsültasyon Randevusu</h3>
+                    <p>Projenizi detaylı olarak konuşmak için bir randevu alın.</p>
+                    
+                    <div class="appointment-form">
+                        <div class="form-group">
+                            <label>Randevu Tarihi Seçin:</label>
+                            <div class="calendar-container">
+                                <div class="calendar-header">
+                                    <button type="button" class="btn-prev-month">&lt;</button>
+                                    <span class="current-month"></span>
+                                    <button type="button" class="btn-next-month">&gt;</button>
+                                </div>
+                                <div class="calendar-grid"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group time-selection" style="display: none;">
+                            <label>Saat Seçin:</label>
+                            <div class="time-slots"></div>
+                        </div>
+                        
+                        <div class="appointment-summary" style="display: none;">
+                            <h4>Randevu Özeti:</h4>
+                            <p><strong>Tarih:</strong> <span class="selected-date"></span></p>
+                            <p><strong>Saat:</strong> <span class="selected-time"></span></p>
+                            <p><strong>Konsültasyon Ücreti:</strong> <span class="consultation-fee">${morpheo_ajax.consultation_fee} ₺</span></p>
+                            <p class="fee-note">* Konsültasyon ücreti, proje onaylandığında toplam fiyattan düşülecektir.</p>
+                        </div>
+                        
+                        <div class="modal-buttons">
+                            <button type="button" class="btn btn-primary btn-confirm-appointment" style="display: none;">
+                                💳 Ödeme Yap ve Randevu Al
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `
 
-    $.post(
-      window.morpheo_ajax.ajax_url,
-      {
-        action: "get_available_time_slots",
-        nonce: window.morpheo_ajax.nonce,
-        date: selectedDate,
-      },
-      (response) => {
-        timeSlots.empty()
-        if (response.success) {
-          const bookedSlots = response.data.booked_slots || []
-          const allTimes = [
-            "09:00",
-            "09:30",
-            "10:00",
-            "10:30",
-            "11:00",
-            "11:30",
-            "13:00",
-            "13:30",
-            "14:00",
-            "14:30",
-            "15:00",
-            "15:30",
-            "16:00",
-            "16:30",
-          ]
+    $("body").append(modalHTML)
+    $(".appointment-modal").addClass("active")
 
-          allTimes.forEach((time) => {
-            const isBooked = bookedSlots.includes(time)
-            const slotClass = isBooked ? "time-slot disabled" : "time-slot"
-            const slotTitle = isBooked ? "Bu saat dolu" : "Müsait"
+    initializeCalendar()
+  }
 
-            timeSlots.append(
-              `<div class="${slotClass}" data-time="${time}" title="${slotTitle}">
-                ${time}
-                ${isBooked ? '<span class="booked-indicator">✗</span>' : ""}
-              </div>`,
-            )
-          })
+  function closeAppointmentModal() {
+    $(".appointment-modal").removeClass("active")
+    setTimeout(() => {
+      $(".appointment-modal").remove()
+    }, 300)
+    selectedDate = null
+    selectedTime = null
+  }
 
-          $("#confirm-appointment-btn").prop("disabled", true)
-        } else {
-          timeSlots.html('<div class="error">Saatler yüklenirken hata oluştu.</div>')
-        }
-      },
-    ).fail(() => {
-      timeSlots.html('<div class="error">Saatler yüklenirken hata oluştu.</div>')
+  function initializeCalendar() {
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+
+    generateCalendar(currentYear, currentMonth)
+
+    $(".btn-prev-month").on("click", () => {
+      const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
+      const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
+      generateCalendar(prevYear, prevMonth)
+    })
+
+    $(".btn-next-month").on("click", () => {
+      const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
+      const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
+      generateCalendar(nextYear, nextMonth)
     })
   }
 
-  function selectTimeSlot() {
-    if ($(this).hasClass("disabled")) {
-      return false
+  function generateCalendar(year, month) {
+    const monthNames = [
+      "Ocak",
+      "Şubat",
+      "Mart",
+      "Nisan",
+      "Mayıs",
+      "Haziran",
+      "Temmuz",
+      "Ağustos",
+      "Eylül",
+      "Ekim",
+      "Kasım",
+      "Aralık",
+    ]
+
+    $(".current-month").text(monthNames[month] + " " + year)
+
+    const firstDay = new Date(year, month, 1).getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const today = new Date()
+
+    let calendarHTML = ""
+
+    // Add day headers
+    const dayHeaders = ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"]
+    dayHeaders.forEach((day) => {
+      calendarHTML += `<div class="calendar-day-header">${day}</div>`
+    })
+
+    // Add empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      calendarHTML += '<div class="calendar-day disabled"></div>'
     }
 
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day)
+      const dateString = date.toISOString().split("T")[0]
+      const isDisabled = date < today || date.getDay() === 0 // Disable past dates and Sundays
+      const classes = ["calendar-day"]
+
+      if (isDisabled) {
+        classes.push("disabled")
+      }
+
+      calendarHTML += `<div class="${classes.join(" ")}" data-date="${dateString}">${day}</div>`
+    }
+
+    $(".calendar-grid").html(calendarHTML)
+  }
+
+  function selectDate() {
+    const $day = $(this)
+    const date = $day.data("date")
+
+    // Remove previous selection
+    $(".calendar-day").removeClass("selected")
+    $day.addClass("selected")
+
+    selectedDate = date
+    $(".selected-date").text(formatDate(date))
+
+    // Load available time slots
+    loadTimeSlots(date)
+
+    // Show time selection
+    $(".time-selection").show()
+  }
+
+  function loadTimeSlots(date) {
+    $.ajax({
+      url: morpheo_ajax.ajax_url,
+      type: "POST",
+      data: {
+        action: "get_available_time_slots",
+        nonce: morpheo_ajax.nonce,
+        date: date,
+      },
+      success: (response) => {
+        if (response.success) {
+          generateTimeSlots(response.data.booked_slots)
+        } else {
+          console.error("Failed to load time slots:", response.data.message)
+        }
+      },
+      error: (xhr, status, error) => {
+        console.error("AJAX error:", error)
+      },
+    })
+  }
+
+  function generateTimeSlots(bookedSlots) {
+    const timeSlots = [
+      "09:00",
+      "09:30",
+      "10:00",
+      "10:30",
+      "11:00",
+      "11:30",
+      "13:00",
+      "13:30",
+      "14:00",
+      "14:30",
+      "15:00",
+      "15:30",
+      "16:00",
+      "16:30",
+      "17:00",
+      "17:30",
+    ]
+
+    let slotsHTML = ""
+
+    timeSlots.forEach((time) => {
+      const isBooked = bookedSlots.includes(time)
+      const classes = ["time-slot"]
+
+      if (isBooked) {
+        classes.push("disabled")
+      }
+
+      slotsHTML += `<div class="${classes.join(" ")}" data-time="${time}">${time}</div>`
+    })
+
+    $(".time-slots").html(slotsHTML)
+  }
+
+  function selectTime() {
+    const $slot = $(this)
+    const time = $slot.data("time")
+
+    // Remove previous selection
     $(".time-slot").removeClass("selected")
-    $(this).addClass("selected")
-    calculatorData.appointmentTime = $(this).data("time")
-    $("#confirm-appointment-btn").prop("disabled", false)
+    $slot.addClass("selected")
+
+    selectedTime = time
+    $(".selected-time").text(time)
+
+    // Show appointment summary and confirm button
+    $(".appointment-summary").show()
+    $(".btn-confirm-appointment").show()
   }
 
   function confirmAppointment() {
-    const appointmentDate = $("#appointment-date").val()
-    const errorEl = $("#appointment-error")
-
-    errorEl.addClass("hidden").text("")
-
-    if (!appointmentDate) {
-      errorEl.text("Lütfen randevu tarihi seçin.").removeClass("hidden")
+    if (!selectedDate || !selectedTime) {
+      alert("Lütfen tarih ve saat seçin.")
       return
     }
 
-    if (!calculatorData.appointmentTime) {
-      errorEl.text("Lütfen randevu saati seçin.").removeClass("hidden")
-      return
-    }
+    const $button = $(".btn-confirm-appointment")
+    $button.prop("disabled", true).text("⏳ Randevu oluşturuluyor...")
 
-    // Disable button to prevent double booking
-    $("#confirm-appointment-btn").prop("disabled", true).text("Randevu kaydediliyor...")
-
-    // First book the appointment
-    $.post(
-      window.morpheo_ajax.ajax_url,
-      {
+    $.ajax({
+      url: morpheo_ajax.ajax_url,
+      type: "POST",
+      data: {
         action: "book_appointment",
-        nonce: window.morpheo_ajax.nonce,
-        calculator_id: calculatorData.calculatorId,
-        appointment_date: appointmentDate,
-        appointment_time: calculatorData.appointmentTime,
+        nonce: morpheo_ajax.nonce,
+        calculator_id: calculatorData.id,
+        appointment_date: selectedDate,
+        appointment_time: selectedTime,
       },
-      (response) => {
+      success: (response) => {
         if (response.success) {
-          // Appointment booked successfully, now redirect to payment
-          const woocommerceUrl =
-            window.morpheo_ajax.woocommerce_url ||
-            "https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu"
+          // Close modal
+          closeAppointmentModal()
 
-          // Randevu bilgilerini URL parametreleri olarak hazırla
-          const appointmentParams = new URLSearchParams({
-            randevu_tarihi: appointmentDate,
-            randevu_saati: calculatorData.appointmentTime,
-            musteri_adi: calculatorData.userData.firstName + " " + calculatorData.userData.lastName,
-            musteri_email: calculatorData.userData.email,
-            musteri_telefon: calculatorData.userData.phone,
-            proje_tipi: websiteTypes[calculatorData.websiteType]?.name || "Bilinmeyen Proje Tipi",
-            tahmini_fiyat: $("#price-range").text(),
-            calculator_id: calculatorData.calculatorId || "",
-            appointment_id: response.data.appointment_id,
-          })
+          // Show success message and redirect to payment
+          alert("✅ Randevunuz başarıyla oluşturuldu! Ödeme sayfasına yönlendiriliyorsunuz...")
 
-          // WooCommerce sitesine yönlendir
-          const separator = woocommerceUrl.includes("?") ? "&" : "?"
-          const paymentUrl = `${woocommerceUrl}${separator}${appointmentParams.toString()}`
+          // Redirect to payment URL
+          if (response.data.payment_url) {
+            window.open(response.data.payment_url, "_blank")
+          }
 
-          // Yeni sekmede aç
-          window.open(paymentUrl, "_blank")
-
-          // Modal'ı kapat ve bilgi mesajı göster
-          closeModal()
-
-          alert(
-            `Randevunuz geçici olarak rezerve edildi ve ödeme sayfasına yönlendiriliyorsunuz.\n\n` +
-              `Randevu Detayları:\n` +
-              `📅 Tarih: ${new Date(appointmentDate).toLocaleDateString("tr-TR")}\n` +
-              `🕐 Saat: ${calculatorData.appointmentTime}\n` +
-              `💰 Ücret: ${window.morpheo_ajax.consultation_fee} ₺\n\n` +
-              `⚠️ Önemli: Ödeme işlemini 15 dakika içinde tamamlamazsanız randevunuz iptal olacaktır.`,
-          )
+          // Send WhatsApp notification
+          sendWhatsAppNotification(response.data.appointment_id)
         } else {
-          errorEl.text(response.data.message || "Randevu kaydedilirken hata oluştu.").removeClass("hidden")
-          $("#confirm-appointment-btn").prop("disabled", false).text("💳 Ödeme Yap ve Randevuyu Onayla")
+          alert("❌ Randevu oluşturulurken hata oluştu: " + response.data.message)
+          $button.prop("disabled", false).text("💳 Ödeme Yap ve Randevu Al")
         }
       },
-    ).fail(() => {
-      errorEl.text("Randevu kaydedilirken hata oluştu. Lütfen tekrar deneyin.").removeClass("hidden")
-      $("#confirm-appointment-btn").prop("disabled", false).text("💳 Ödeme Yap ve Randevuyu Onayla")
+      error: (xhr, status, error) => {
+        console.error("AJAX error:", error)
+        alert("❌ Bir hata oluştu. Lütfen tekrar deneyin.")
+        $button.prop("disabled", false).text("💳 Ödeme Yap ve Randevu Al")
+      },
     })
   }
-})(window.jQuery)
+
+  function sendWhatsAppNotification(appointmentId) {
+    // Send WhatsApp notification to admin
+    $.ajax({
+      url: morpheo_ajax.ajax_url,
+      type: "POST",
+      data: {
+        action: "send_whatsapp_notification",
+        nonce: morpheo_ajax.nonce,
+        appointment_id: appointmentId,
+        type: "new_appointment",
+      },
+      success: (response) => {
+        console.log("WhatsApp notification sent:", response)
+      },
+      error: (xhr, status, error) => {
+        console.error("WhatsApp notification error:", error)
+      },
+    })
+  }
+
+  function handleContactSubmit(e) {
+    e.preventDefault()
+
+    const formData = new FormData(this)
+    const $submitButton = $(this).find('button[type="submit"]')
+
+    $submitButton.prop("disabled", true).text("Gönderiliyor...")
+
+    // Here you would typically send the form data via AJAX
+    // For now, we'll just show a success message
+    setTimeout(() => {
+      alert("✅ Mesajınız başarıyla gönderildi! En kısa sürede size dönüş yapacağız.")
+      this.reset()
+      $submitButton.prop("disabled", false).text("Mesaj Gönder")
+    }, 1000)
+  }
+
+  function toggleTheme() {
+    const $calculator = $(".morpheo-calculator")
+    const isDark = $calculator.hasClass("dark-theme")
+
+    if (isDark) {
+      $calculator.removeClass("dark-theme").addClass("light-theme")
+      localStorage.setItem("morpheo-calculator-theme", "light")
+      updateThemeIcon("light")
+    } else {
+      $calculator.removeClass("light-theme").addClass("dark-theme")
+      localStorage.setItem("morpheo-calculator-theme", "dark")
+      updateThemeIcon("dark")
+    }
+  }
+
+  function updateThemeIcon(theme) {
+    const icon = theme === "dark" ? "☀️" : "🌙"
+    $(".theme-toggle").text(icon)
+  }
+
+  function formatDate(dateString) {
+    const date = new Date(dateString)
+    const options = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "long",
+    }
+    return date.toLocaleDateString("tr-TR", options)
+  }
+
+  // Utility functions
+  function debounce(func, wait) {
+    let timeout
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout)
+        func(...args)
+      }
+      clearTimeout(timeout)
+      timeout = setTimeout(later, wait)
+    }
+  }
+
+  function throttle(func, limit) {
+    let inThrottle
+    return function () {
+      const args = arguments
+      
+      if (!inThrottle) {
+        func.apply(this, args)
+        inThrottle = true
+        setTimeout(() => (inThrottle = false), limit)
+      }
+    }
+  }
+})(window.jQuery) // Use window.jQuery to ensure jQuery is declared

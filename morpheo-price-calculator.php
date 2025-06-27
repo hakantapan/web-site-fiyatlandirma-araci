@@ -4,7 +4,7 @@
  * Plugin URI: https://morpheodijital.com
  * GitHub Plugin URI: https://github.com/hakantapan/web-site-fiyatlandirma-araci
  * Description: Professional website price calculator with dark mode, e-commerce modules, and appointment booking
- * Version: 2.2.1
+ * Version: 2.3.0
  * Author: Morpheo Dijital
  * License: GPL v2 or later
  * Text Domain: morpheo-calculator
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MORPHEO_CALC_VERSION', '2.2.1');
+define('MORPHEO_CALC_VERSION', '2.3.0');
 define('MORPHEO_CALC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -24,6 +24,7 @@ define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-templates.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/email-sender.php';
 require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/payment-api.php';
+require_once MORPHEO_CALC_PLUGIN_PATH . 'includes/whatsapp-sender.php';
 
 class MorpheoCalculator {
     
@@ -36,6 +37,11 @@ class MorpheoCalculator {
         add_action('wp_ajax_nopriv_get_available_time_slots', array($this, 'get_available_time_slots'));
         add_action('wp_ajax_book_appointment', array($this, 'book_appointment'));
         add_action('wp_ajax_nopriv_book_appointment', array($this, 'book_appointment'));
+        
+        // WhatsApp AJAX hooks
+        add_action('wp_ajax_send_whatsapp_notification', array($this, 'ajax_send_whatsapp_notification'));
+        add_action('wp_ajax_nopriv_send_whatsapp_notification', array($this, 'ajax_send_whatsapp_notification'));
+        add_action('wp_ajax_test_whatsapp_message', array($this, 'ajax_test_whatsapp_message'));
         
         // Admin AJAX hooks
         add_action('wp_ajax_check_single_payment', array($this, 'ajax_check_single_payment'));
@@ -124,6 +130,31 @@ class MorpheoCalculator {
             'type' => 'string',
             'sanitize_callback' => 'sanitize_text_field',
             'default' => ''
+        ));
+        
+        // WhatsApp settings
+        register_setting('morpheo_calculator_options', 'morpheo_whatsapp_enabled', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => '0'
+        ));
+        
+        register_setting('morpheo_calculator_options', 'morpheo_whatsapp_token', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        ));
+        
+        register_setting('morpheo_calculator_options', 'morpheo_whatsapp_from', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => '905076005662'
+        ));
+        
+        register_setting('morpheo_calculator_options', 'morpheo_whatsapp_admin', array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => '908503073709'
         ));
     }
     
@@ -230,95 +261,74 @@ class MorpheoCalculator {
         // Get booked time slots for the selected date
         $booked_slots = $wpdb->get_col($wpdb->prepare(
             "SELECT appointment_time FROM $appointments_table 
-             WHERE appointment_date = %s 
-             AND payment_status IN ('paid', 'confirmed', 'pending')",
+             WHERE appointment_date =  AND status != 'cancelled'",
             $date
         ));
         
-        // Convert to simple time format (HH:MM)
-        $booked_times = array();
-        foreach ($booked_slots as $slot) {
-            $booked_times[] = date('H:i', strtotime($slot));
-        }
-        
-        wp_send_json_success(array('booked_slots' => $booked_times));
+        wp_send_json_success(array('booked_slots' => $booked_slots));
     }
     
     public function book_appointment() {
         check_ajax_referer('morpheo_calculator_nonce', 'nonce');
         
-        global $wpdb;
-        
         $calculator_id = intval($_POST['calculator_id']);
         $appointment_date = sanitize_text_field($_POST['appointment_date']);
         $appointment_time = sanitize_text_field($_POST['appointment_time']);
-        $consultation_fee = get_option('morpheo_consultation_fee', '250');
         
-        // Check if the time slot is still available
+        if (!$calculator_id || !$appointment_date || !$appointment_time) {
+            wp_send_json_error(array('message' => 'Missing required fields'));
+        }
+        
+        global $wpdb;
+        
+        // Get calculator data
+        $results_table = $wpdb->prefix . 'morpheo_calculator_results';
+        $calculator_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $results_table WHERE id = %d",
+            $calculator_id
+        ));
+        
+        if (!$calculator_data) {
+            wp_send_json_error(array('message' => 'Calculator data not found'));
+        }
+        
+        // Check if time slot is still available
         $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
         $existing = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM $appointments_table 
-             WHERE appointment_date = %s 
-             AND appointment_time = %s 
-             AND payment_status IN ('paid', 'confirmed', 'pending')",
-            $appointment_date,
-            $appointment_time
+             WHERE appointment_date = %s AND appointment_time = %s AND status != 'cancelled'",
+            $appointment_date, $appointment_time
         ));
         
         if ($existing) {
-            wp_send_json_error(array('message' => 'Bu saat dilimi artık müsait değil. Lütfen başka bir saat seçin.'));
+            wp_send_json_error(array('message' => 'Time slot is no longer available'));
         }
         
-        // Book the appointment
-        $data = array(
+        // Create appointment
+        $appointment_data = array(
             'calculator_id' => $calculator_id,
             'appointment_date' => $appointment_date,
             'appointment_time' => $appointment_time,
+            'status' => 'pending',
             'payment_status' => 'pending',
-            'payment_amount' => floatval($consultation_fee),
             'created_at' => current_time('mysql')
         );
         
-        $result = $wpdb->insert($appointments_table, $data);
+        $result = $wpdb->insert($appointments_table, $appointment_data);
         
         if ($result) {
             $appointment_id = $wpdb->insert_id;
             
-            // Get calculator data for emails
-            $results_table = $wpdb->prefix . 'morpheo_calculator_results';
-            $calculator_data = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM $results_table WHERE id = %d",
-                $calculator_id
-            ));
+            // Generate payment URL
+            $payment_url = MorpheoPaymentAPI::generatePaymentURL($appointment_id, $calculator_data);
             
-            if ($calculator_data) {
-                // Create payment URL for Morpheo Dijital sales site
-                $payment_url = 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu&' . http_build_query(array(
-                    'randevu_tarihi' => $appointment_date,
-                    'randevu_saati' => $appointment_time,
-                    'musteri_adi' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
-                    'musteri_email' => $calculator_data->email,
-                    'musteri_telefon' => $calculator_data->phone,
-                    'proje_tipi' => $calculator_data->website_type,
-                    'calculator_id' => $calculator_id,
-                    'appointment_id' => $appointment_id,
-                    'ucret' => $consultation_fee,
-        
-                ));
-                
-                // Send emails with payment URL
-                $appointment_data = array(
-                    'appointment_id' => $appointment_id,
-                    'appointment_date' => $appointment_date,
-                    'appointment_time' => $appointment_time
-                );
-                
-                // Send customer confirmation email with payment link
-                MorpheoEmailSender::sendCustomerConfirmation($appointment_data, $calculator_data, $payment_url);
-                
-                // Send admin notification email
-                MorpheoEmailSender::sendAdminNotification($appointment_data, $calculator_data);
-            }
+            // Send confirmation email
+            MorpheoEmailSender::sendCustomerAppointmentConfirmation($appointment_data, $calculator_data, $payment_url);
+            MorpheoEmailSender::sendAdminAppointmentNotification($appointment_data, $calculator_data);
+            
+            // Send WhatsApp notifications
+            MorpheoWhatsAppSender::sendCustomerAppointmentConfirmation($appointment_data, $calculator_data, $payment_url);
+            MorpheoWhatsAppSender::sendAdminAppointmentNotification($appointment_data, $calculator_data);
             
             wp_send_json_success(array(
                 'message' => 'Appointment booked successfully',
@@ -330,103 +340,107 @@ class MorpheoCalculator {
         }
     }
     
-    // New AJAX handlers for admin
-    public function ajax_check_single_payment() {
-        check_ajax_referer('morpheo_admin_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'Unauthorized'));
-        }
+    public function ajax_send_whatsapp_notification() {
+        check_ajax_referer('morpheo_calculator_nonce', 'nonce');
         
         $appointment_id = intval($_POST['appointment_id']);
-        $email = sanitize_email($_POST['email']);
+        $type = sanitize_text_field($_POST['type']);
         
-        if (!$email) {
-            wp_send_json_error(array('message' => 'E-posta adresi gerekli'));
+        if (!$appointment_id || !$type) {
+            wp_send_json_error(array('message' => 'Missing parameters'));
         }
         
-        // Check payment status via API
-        $payment_status = MorpheoPaymentAPI::checkPaymentStatus($email);
+        global $wpdb;
         
-        if ($payment_status && $payment_status['paid']) {
-            // Update appointment status
-            global $wpdb;
-            $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
-            
-            $update_result = $wpdb->update(
-                $appointments_table,
-                array(
-                    'payment_status' => 'paid',
-                    'updated_at' => current_time('mysql'),
-                    'notes' => 'API ile manuel kontrol: ' . date('d.m.Y H:i')
-                ),
-                array('id' => $appointment_id),
-                array('%s', '%s', '%s'),
-                array('%d')
-            );
-            
-            if ($update_result) {
-                wp_send_json_success(array(
-                    'message' => 'Ödeme doğrulandı! Randevu durumu güncellendi.',
-                    'payment_info' => $payment_status
-                ));
-            } else {
-                wp_send_json_error(array('message' => 'Veritabanı güncellenirken hata oluştu'));
-            }
+        // Get appointment and calculator data
+        $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
+        $results_table = $wpdb->prefix . 'morpheo_calculator_results';
+        
+        $appointment_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $appointments_table WHERE id = %d",
+            $appointment_id
+        ), ARRAY_A);
+        
+        if (!$appointment_data) {
+            wp_send_json_error(array('message' => 'Appointment not found'));
+        }
+        
+        $calculator_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $results_table WHERE id = %d",
+            $appointment_data['calculator_id']
+        ));
+        
+        if (!$calculator_data) {
+            wp_send_json_error(array('message' => 'Calculator data not found'));
+        }
+        
+        $success = false;
+        
+        switch ($type) {
+            case 'new_appointment':
+                $success = MorpheoWhatsAppSender::sendAdminAppointmentNotification($appointment_data, $calculator_data);
+                break;
+            case 'reminder':
+                $success = MorpheoWhatsAppSender::sendAppointmentReminder($appointment_data, $calculator_data);
+                break;
+            case 'payment_confirmation':
+                $success = MorpheoWhatsAppSender::sendPaymentConfirmation($appointment_data, $calculator_data);
+                break;
+        }
+        
+        if ($success) {
+            wp_send_json_success(array('message' => 'WhatsApp notification sent successfully'));
         } else {
-            wp_send_json_success(array(
-                'message' => 'Henüz ödeme alınmamış',
-                'payment_info' => $payment_status
-            ));
+            wp_send_json_error(array('message' => 'Failed to send WhatsApp notification'));
+        }
+    }
+    
+    public function ajax_test_whatsapp_message() {
+        check_admin_referer('morpheo_admin_nonce', 'nonce');
+        
+        $result = MorpheoWhatsAppSender::sendTestMessage();
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result);
+        }
+    }
+    
+    public function ajax_check_single_payment() {
+        check_admin_referer('morpheo_admin_nonce', 'nonce');
+        
+        $appointment_id = intval($_POST['appointment_id']);
+        
+        if (!$appointment_id) {
+            wp_send_json_error(array('message' => 'Appointment ID is required'));
+        }
+        
+        $result = MorpheoPaymentAPI::checkSinglePayment($appointment_id);
+        
+        if ($result) {
+            wp_send_json_success(array('message' => 'Payment status updated'));
+        } else {
+            wp_send_json_error(array('message' => 'Failed to check payment status'));
         }
     }
     
     public function ajax_get_api_response() {
-        check_ajax_referer('morpheo_admin_nonce', 'nonce');
+        check_admin_referer('morpheo_admin_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'Unauthorized'));
+        $appointment_id = intval($_POST['appointment_id']);
+        
+        if (!$appointment_id) {
+            wp_send_json_error(array('message' => 'Appointment ID is required'));
         }
         
-        $email = sanitize_email($_POST['email']);
+        $response = MorpheoPaymentAPI::getAPIResponse($appointment_id);
         
-        if (!$email) {
-            wp_send_json_error(array('message' => 'E-posta adresi gerekli'));
-        }
-        
-        // Get raw API response for debugging
-        $api_url = 'https://morpheodijital.com/satis/wp-content/themes/snn-brx-child-theme/siparis-sorgula.php';
-        $api_key = 't3RcN@f9h$5!ZxLuQ1W#pK7eMv%BdA82';
-        
-        $url = $api_url . '?' . http_build_query(array(
-            'email' => $email,
-            'key' => $api_key
-        ));
-        
-        $response = wp_remote_get($url, array('timeout' => 30));
-        
-        if (is_wp_error($response)) {
-            wp_send_json_error(array('message' => 'API hatası: ' . $response->get_error_message()));
-        }
-        
-        $body = wp_remote_retrieve_body($response);
-        $status_code = wp_remote_retrieve_response_code($response);
-        
-        wp_send_json_success(array(
-            'url' => $url,
-            'status_code' => $status_code,
-            'response' => $body,
-            'parsed' => MorpheoPaymentAPI::checkPaymentStatus($email)
-        ));
+        wp_send_json_success(array('response' => $response));
     }
     
-    // New AJAX handler for result details
     public function ajax_get_result_details() {
-        check_ajax_referer('morpheo_admin_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'Unauthorized'));
-        }
+        check_admin_referer('morpheo_admin_nonce', 'nonce');
         
         $result_id = intval($_POST['result_id']);
         
@@ -435,313 +449,40 @@ class MorpheoCalculator {
         }
         
         global $wpdb;
-        $table_name = $wpdb->prefix . 'morpheo_calculator_results';
+        $results_table = $wpdb->prefix . 'morpheo_calculator_results';
         
         $result = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE id = %d",
+            "SELECT * FROM $results_table WHERE id = %d",
             $result_id
         ));
         
-        if (!$result) {
+        if ($result) {
+            // Format the data for display
+            $formatted_result = array(
+                'id' => $result->id,
+                'customer_name' => $result->first_name . ' ' . $result->last_name,
+                'email' => $result->email,
+                'phone' => $result->phone,
+                'company' => $result->company,
+                'city' => $result->city,
+                'website_type' => $result->website_type,
+                'page_count' => $result->page_count,
+                'features' => json_decode($result->features, true),
+                'design_complexity' => $result->design_complexity,
+                'timeline' => $result->timeline,
+                'technical_seo' => $result->technical_seo,
+                'management_features' => $result->management_features,
+                'security_features' => $result->security_features,
+                'ecommerce_modules' => $result->ecommerce_modules,
+                'min_price' => number_format($result->min_price, 0, ',', '.'),
+                'max_price' => number_format($result->max_price, 0, ',', '.'),
+                'created_at' => date('d.m.Y H:i', strtotime($result->created_at))
+            );
+            
+            wp_send_json_success($formatted_result);
+        } else {
             wp_send_json_error(array('message' => 'Result not found'));
         }
-        
-        // Check if there are any appointments for this result
-        $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
-        $appointments = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $appointments_table WHERE calculator_id = %d ORDER BY created_at DESC",
-            $result_id
-        ));
-        
-        // Generate HTML for the modal
-        $html = $this->generate_result_details_html($result, $appointments);
-        
-        wp_send_json_success(array('html' => $html));
-    }
-    
-    private function generate_result_details_html($result, $appointments) {
-        $website_types = array(
-            'corporate' => 'Kurumsal Website',
-            'ecommerce' => 'E-Ticaret Sitesi',
-            'blog' => 'Blog/İçerik Sitesi',
-            'landing' => 'Özel Kampanya Sayfası'
-        );
-        
-        $design_levels = array(
-            'basic' => 'Profesyonel & Sade',
-            'custom' => 'Markanıza Özel',
-            'premium' => 'Lüks & Etkileyici'
-        );
-        
-        $features = json_decode($result->features, true);
-        $feature_names = array(
-            'seo' => 'SEO Optimizasyonu',
-            'cms' => 'İçerik Yönetimi',
-            'multilang' => 'Çoklu Dil',
-            'payment' => 'Online Ödeme'
-        );
-        
-        ob_start();
-        ?>
-        <div class="result-details">
-            <div class="detail-section">
-                <h3>👤 Müşteri Bilgileri</h3>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <strong>Ad Soyad:</strong>
-                        <span><?php echo esc_html($result->first_name . ' ' . $result->last_name); ?></span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>E-posta:</strong>
-                        <span><a href="mailto:<?php echo esc_attr($result->email); ?>"><?php echo esc_html($result->email); ?></a></span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Telefon:</strong>
-                        <span><a href="tel:<?php echo esc_attr($result->phone); ?>"><?php echo esc_html($result->phone); ?></a></span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Şirket:</strong>
-                        <span><?php echo esc_html($result->company ?: 'Belirtilmemiş'); ?></span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Şehir:</strong>
-                        <span><?php echo esc_html($result->city ?: 'Belirtilmemiş'); ?></span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Kayıt Tarihi:</strong>
-                        <span><?php echo date('d.m.Y H:i', strtotime($result->created_at)); ?></span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="detail-section">
-                <h3>🌐 Proje Detayları</h3>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <strong>Website Türü:</strong>
-                        <span><?php echo esc_html($website_types[$result->website_type] ?? ucfirst($result->website_type)); ?></span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Sayfa Sayısı:</strong>
-                        <span><?php echo esc_html($result->page_count); ?> sayfa</span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Tasarım Seviyesi:</strong>
-                        <span><?php echo esc_html($design_levels[$result->design_complexity] ?? ucfirst($result->design_complexity)); ?></span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Fiyat Aralığı:</strong>
-                        <span class="price-range"><?php echo number_format($result->min_price, 0, ',', '.') . ' - ' . number_format($result->max_price, 0, ',', '.') . ' ₺'; ?></span>
-                    </div>
-                </div>
-                
-                <?php if (!empty($features) && is_array($features)): ?>
-                <div class="detail-item">
-                    <strong>Seçilen Özellikler:</strong>
-                    <div class="features-list">
-                        <?php foreach ($features as $feature): ?>
-                            <?php if (isset($feature_names[$feature])): ?>
-                                <span class="feature-tag"><?php echo esc_html($feature_names[$feature]); ?></span>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-            </div>
-            
-            <?php if (!empty($appointments)): ?>
-            <div class="detail-section">
-                <h3>📅 Randevular</h3>
-                <div class="appointments-list">
-                    <?php foreach ($appointments as $appointment): ?>
-                        <?php
-                        $status_labels = array(
-                            'pending' => 'Beklemede',
-                            'paid' => 'Ödendi',
-                            'confirmed' => 'Onaylandı',
-                            'completed' => 'Tamamlandı',
-                            'cancelled' => 'İptal'
-                        );
-                        $status_class = 'status-' . $appointment->payment_status;
-                        ?>
-                        <div class="appointment-item">
-                            <div class="appointment-info">
-                                <strong><?php echo date('d.m.Y', strtotime($appointment->appointment_date)); ?></strong>
-                                <span class="time"><?php echo date('H:i', strtotime($appointment->appointment_time)); ?></span>
-                                <span class="status-badge <?php echo $status_class; ?>">
-                                    <?php echo $status_labels[$appointment->payment_status] ?? ucfirst($appointment->payment_status); ?>
-                                </span>
-                            </div>
-                            <div class="appointment-amount">
-                                <?php echo number_format($appointment->payment_amount, 0, ',', '.'); ?> ₺
-                            </div>
-                            <?php if ($appointment->notes): ?>
-                                <div class="appointment-notes">
-                                    <small><?php echo esc_html($appointment->notes); ?></small>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-            
-            <div class="detail-actions">
-                <a href="mailto:<?php echo esc_attr($result->email); ?>" class="button button-primary">📧 E-posta Gönder</a>
-                <a href="tel:<?php echo esc_attr($result->phone); ?>" class="button button-secondary">📞 Ara</a>
-                <?php if (!empty($appointments)): ?>
-                    <a href="<?php echo admin_url('admin.php?page=morpheo-calculator-appointments&customer=' . urlencode($result->email)); ?>" class="button">📅 Randevuları Görüntüle</a>
-                <?php endif; ?>
-            </div>
-        </div>
-        
-        <style>
-        .result-details {
-            max-width: 100%;
-        }
-        
-        .detail-section {
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .detail-section:last-child {
-            border-bottom: none;
-        }
-        
-        .detail-section h3 {
-            margin-bottom: 15px;
-            color: #1d4ed8;
-            font-size: 16px;
-        }
-        
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 12px;
-        }
-        
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        
-        .detail-item strong {
-            color: #374151;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .detail-item span {
-            color: #1f2937;
-            font-weight: 500;
-        }
-        
-        .price-range {
-            color: #059669 !important;
-            font-weight: 700 !important;
-            font-size: 16px !important;
-        }
-        
-        .features-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        
-        .feature-tag {
-            background: #dcfce7;
-            color: #166534;
-            padding: 4px 12px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        
-        .appointments-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .appointment-item {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-        }
-        
-        .appointment-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-        }
-        
-        .appointment-info .time {
-            background: #e3f2fd;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-paid { background: #d1ecf1; color: #0c5460; }
-        .status-confirmed { background: #d4edda; color: #155724; }
-        .status-completed { background: #d4edda; color: #155724; }
-        .status-cancelled { background: #f8d7da; color: #721c24; }
-        
-        .appointment-amount {
-            font-weight: 700;
-            color: #059669;
-        }
-        
-        .appointment-notes {
-            margin-top: 8px;
-            color: #6b7280;
-            font-style: italic;
-        }
-        
-        .detail-actions {
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        @media (max-width: 600px) {
-            .detail-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .appointment-info {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-            
-            .detail-actions {
-                flex-direction: column;
-            }
-        }
-        </style>
-        <?php
-        return ob_get_clean();
     }
     
     public function send_appointment_reminders() {
@@ -750,37 +491,41 @@ class MorpheoCalculator {
         $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
         $results_table = $wpdb->prefix . 'morpheo_calculator_results';
         
-        // Get appointments for tomorrow
+        // Get appointments for tomorrow that haven't been reminded
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
         
         $appointments = $wpdb->get_results($wpdb->prepare(
             "SELECT a.*, r.* FROM $appointments_table a 
              LEFT JOIN $results_table r ON a.calculator_id = r.id 
              WHERE a.appointment_date = %s 
-             AND a.payment_status IN ('paid', 'confirmed')
-             AND a.reminder_sent = 0",
+             AND a.status = 'confirmed' 
+             AND a.payment_status = 'completed'
+             AND (a.reminder_sent IS NULL OR a.reminder_sent = 0)",
             $tomorrow
         ));
         
         foreach ($appointments as $appointment) {
-            $appointment_data = array(
-                'appointment_date' => $appointment->appointment_date,
-                'appointment_time' => $appointment->appointment_time
+            // Send email reminder
+            MorpheoEmailSender::sendAppointmentReminder($appointment, $appointment);
+            
+            // Send WhatsApp reminder
+            MorpheoWhatsAppSender::sendAppointmentReminder($appointment, $appointment);
+            
+            // Mark as reminded
+            $wpdb->update(
+                $appointments_table,
+                array('reminder_sent' => 1),
+                array('id' => $appointment->id)
             );
-            
-            $sent = MorpheoEmailSender::sendAppointmentReminder($appointment_data, $appointment);
-            
-            if ($sent) {
-                // Mark reminder as sent
-                $wpdb->update(
-                    $appointments_table,
-                    array('reminder_sent' => 1),
-                    array('id' => $appointment->id),
-                    array('%d'),
-                    array('%d')
-                );
-            }
         }
+    }
+    
+    public function add_cron_intervals($schedules) {
+        $schedules['morpheo_10min'] = array(
+            'interval' => 600, // 10 minutes
+            'display' => __('Every 10 Minutes')
+        );
+        return $schedules;
     }
     
     public function admin_page() {
@@ -801,17 +546,35 @@ class MorpheoCalculator {
     
     public function activate() {
         $this->create_tables();
-        if (get_option('morpheo_booking_url') === false) {
-            add_option('morpheo_booking_url', home_url('/iletisim'));
+        
+        // Set default options
+        add_option('morpheo_woocommerce_url', 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu');
+        add_option('morpheo_consultation_fee', '250');
+        add_option('morpheo_admin_emails', '');
+        add_option('morpheo_whatsapp_enabled', '0');
+        add_option('morpheo_whatsapp_token', '');
+        add_option('morpheo_whatsapp_from', '905076005662');
+        add_option('morpheo_whatsapp_admin', '908503073709');
+        
+        // Schedule cron jobs
+        if (!wp_next_scheduled('morpheo_send_appointment_reminders')) {
+            wp_schedule_event(time(), 'daily', 'morpheo_send_appointment_reminders');
         }
-        flush_rewrite_rules();
+        
+        if (!wp_next_scheduled('morpheo_check_payments')) {
+            wp_schedule_event(time(), 'morpheo_10min', 'morpheo_check_payments');
+        }
+        
+        if (!wp_next_scheduled('morpheo_cleanup_expired')) {
+            wp_schedule_event(time(), 'daily', 'morpheo_cleanup_expired');
+        }
     }
     
     public function deactivate() {
+        // Clear scheduled events
         wp_clear_scheduled_hook('morpheo_send_appointment_reminders');
         wp_clear_scheduled_hook('morpheo_check_payments');
         wp_clear_scheduled_hook('morpheo_cleanup_expired');
-        flush_rewrite_rules();
     }
     
     private function create_tables() {
@@ -820,59 +583,54 @@ class MorpheoCalculator {
         $charset_collate = $wpdb->get_charset_collate();
         
         // Calculator results table
-        $table_name = $wpdb->prefix . 'morpheo_calculator_results';
-        $sql = "CREATE TABLE $table_name (
+        $results_table = $wpdb->prefix . 'morpheo_calculator_results';
+        $results_sql = "CREATE TABLE $results_table (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             website_type varchar(50) NOT NULL,
             page_count int(11) NOT NULL,
             features text,
-            design_complexity varchar(50),
-            timeline varchar(50),
-            technical_seo varchar(50),
-            management_features text,
-            security_features text,
-            ecommerce_modules text,
-            first_name varchar(100),
-            last_name varchar(100),
-            email varchar(100),
-            phone varchar(20),
-            company varchar(200),
-            city varchar(100),
-            min_price decimal(10,2),
-            max_price decimal(10,2),
+            design_complexity varchar(50) NOT NULL,
+            timeline varchar(50) NOT NULL,
+            technical_seo varchar(50) DEFAULT '',
+            management_features varchar(50) DEFAULT '',
+            security_features varchar(50) DEFAULT '',
+            ecommerce_modules varchar(50) DEFAULT '',
+            first_name varchar(100) NOT NULL,
+            last_name varchar(100) NOT NULL,
+            email varchar(100) NOT NULL,
+            phone varchar(20) NOT NULL,
+            company varchar(200) DEFAULT '',
+            city varchar(100) DEFAULT '',
+            min_price decimal(10,2) NOT NULL,
+            max_price decimal(10,2) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id)
         ) $charset_collate;";
         
         // Appointments table
         $appointments_table = $wpdb->prefix . 'morpheo_calculator_appointments';
-        $sql2 = "CREATE TABLE $appointments_table (
+        $appointments_sql = "CREATE TABLE $appointments_table (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
-            calculator_id mediumint(9),
-            appointment_date date,
-            appointment_time time,
+            calculator_id mediumint(9) NOT NULL,
+            appointment_date date NOT NULL,
+            appointment_time time NOT NULL,
+            status varchar(20) DEFAULT 'pending',
             payment_status varchar(20) DEFAULT 'pending',
-            payment_amount decimal(10,2) DEFAULT 250.00,
+            payment_url text,
+            api_response text,
             reminder_sent tinyint(1) DEFAULT 0,
-            notes text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY unique_appointment (appointment_date, appointment_time),
-            FOREIGN KEY (calculator_id) REFERENCES $table_name(id)
+            KEY calculator_id (calculator_id),
+            KEY appointment_date (appointment_date),
+            KEY status (status),
+            KEY payment_status (payment_status)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
-        dbDelta($sql2);
-    }
-
-    public function add_cron_intervals($schedules) {
-        $schedules['morpheo_10min'] = array(
-            'interval' => 600, // 10 minutes
-            'display' => 'Every 10 Minutes'
-        );
-        return $schedules;
+        dbDelta($results_sql);
+        dbDelta($appointments_sql);
     }
 }
 
