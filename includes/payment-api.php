@@ -86,7 +86,7 @@ class MorpheoPaymentAPI {
      * Process JSON response
      */
     private static function processJsonResponse($data, $email) {
-        if (isset($data['status']) && $data['status'] === 'paid') {
+        if (isset($data['status']) && in_array($data['status'], ['paid', 'processing', 'completed'])) {
             return array(
                 'paid' => true,
                 'order_id' => $data['order_id'] ?? null,
