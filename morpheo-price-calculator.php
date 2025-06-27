@@ -293,7 +293,7 @@ class MorpheoCalculator {
             
             if ($calculator_data) {
                 // Create payment URL for Morpheo Dijital sales site
-                $payment_url = 'https://morpheodijital.com/satis/?' . http_build_query(array(
+                $payment_url = 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu&' . http_build_query(array(
                     'randevu_tarihi' => $appointment_date,
                     'randevu_saati' => $appointment_time,
                     'musteri_adi' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
