@@ -311,9 +311,8 @@ class MorpheoCalculator {
             ));
             
             if ($calculator_data) {
-                // Create payment URL for Morpheo Dijital sales site
-                // Ensure the base URL is always HTTPS
-                $payment_url = 'https://morpheodijital.com/satis/?' . http_build_query(array(
+                // Create payment URL parameters
+                $payment_params = array(
                     'randevu_tarihi' => $appointment_date,
                     'randevu_saati' => $appointment_time,
                     'musteri_adi' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
@@ -324,10 +323,15 @@ class MorpheoCalculator {
                     'appointment_id' => $appointment_id,
                     'ucret' => $consultation_fee,
                     'urun' => 'web-site-konsultasyon'
-                ));
+                );
+                
+                // Build the payment URL properly
+                $base_url = 'https://morpheodijital.com/satis/';
+                $payment_url = $base_url . '?' . http_build_query($payment_params, '', '&', PHP_QUERY_RFC3986);
                 
                 // Log the generated payment URL for debugging
                 error_log('Morpheo Calculator: Generated Payment URL: ' . $payment_url);
+                error_log('Morpheo Calculator: Payment Parameters: ' . print_r($payment_params, true));
 
                 // Prepare appointment data
                 $appointment_data = array(

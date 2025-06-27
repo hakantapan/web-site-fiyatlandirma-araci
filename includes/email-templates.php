@@ -54,6 +54,37 @@ class MorpheoEmailTemplates {
                 .social-links a { color: #00ff00; text-decoration: none; margin: 0 10px; }
                 .warning-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin: 20px 0; }
                 .warning-box p { color: #dc2626; margin: 0; font-size: 14px; }
+                .payment-button { 
+                    display: inline-block; 
+                    background: linear-gradient(135deg, #dc2626, #991b1b); 
+                    color: white !important; 
+                    padding: 15px 30px; 
+                    text-decoration: none !important; 
+                    border-radius: 8px; 
+                    font-weight: 700; 
+                    font-size: 16px; 
+                    margin: 10px;
+                    border: none;
+                    cursor: pointer;
+                }
+                .payment-button:hover {
+                    background: linear-gradient(135deg, #991b1b, #7f1d1d);
+                    color: white !important;
+                    text-decoration: none !important;
+                }
+                .payment-url {
+                    word-break: break-all; 
+                    background: #f8fafc; 
+                    padding: 15px; 
+                    border-radius: 8px; 
+                    font-family: monospace;
+                    border: 1px solid #e2e8f0;
+                    margin: 15px 0;
+                }
+                .payment-url a {
+                    color: #1d4ed8 !important;
+                    text-decoration: underline !important;
+                }
                 @media (max-width: 600px) {
                     .container { margin: 0; }
                     .header, .content { padding: 20px; }
@@ -61,6 +92,7 @@ class MorpheoEmailTemplates {
                     .detail-label, .detail-value { display: block; padding: 4px 0; }
                     .detail-label { font-weight: 600; }
                     .project-features { justify-content: center; }
+                    .payment-button { display: block; text-align: center; margin: 15px 0; }
                 }
             </style>
         </head>
@@ -131,18 +163,15 @@ class MorpheoEmailTemplates {
         </div>
     </div>
     
-    <a href="' . esc_url($data['payment_url']) . '" target="_blank"
-       style="display: inline-block; background: linear-gradient(135deg, #dc2626, #991b1b); 
-              color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; 
-              font-weight: 700; font-size: 16px; margin: 10px;">
+    <a href="' . esc_url($data['payment_url']) . '" target="_blank" class="payment-button">
         💳 Hemen Ödeme Yap
     </a>
     
     <div style="margin-top: 20px; font-size: 14px; color: #64748b;">
-        <p>Ödeme yapmak için yukarıdaki butona tıklayın veya aşağıdaki linki kullanın:</p>
-        <p style="word-break: break-all; background: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace;">
+        <p><strong>Ödeme yapmak için yukarıdaki butona tıklayın veya aşağıdaki linki kopyalayın:</strong></p>
+        <div class="payment-url">
             <a href="' . esc_url($data['payment_url']) . '" target="_blank">' . esc_html($data['payment_url']) . '</a>
-        </p>
+        </div>
     </div>
     
     <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px;">
