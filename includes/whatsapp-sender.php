@@ -135,7 +135,9 @@ class MorpheoWhatsAppSender {
         $message .= "💰 *Konsültasyon Ücreti:* " . number_format(get_option('morpheo_consultation_fee', '250'), 0, ',', '.') . " ₺\n\n";
         
         if (!empty($payment_url)) {
-            $message .= "💳 *Ödeme yapmak için:*\n" . $payment_url . "\n\n";
+            // Ensure the URL is on its own line for better WhatsApp parsing
+            $message .= "💳 *Ödeme yapmak için:*\n";
+            $message .= $payment_url . "\n\n"; 
             $message .= "⚠️ *Önemli:* Ödeme işlemini 15 dakika içinde tamamlamazsanız randevunuz iptal olacaktır.\n\n";
         } else {
             $message .= "✅ Ödemeniz alınmıştır. Randevunuz onaylandı.\n\n";

@@ -131,7 +131,7 @@ class MorpheoEmailTemplates {
         </div>
     </div>
     
-    <a href="' . esc_url($data['payment_url']) . '" 
+    <a href="' . esc_url($data['payment_url']) . '" target="_blank"
        style="display: inline-block; background: linear-gradient(135deg, #dc2626, #991b1b); 
               color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; 
               font-weight: 700; font-size: 16px; margin: 10px;">
@@ -141,7 +141,7 @@ class MorpheoEmailTemplates {
     <div style="margin-top: 20px; font-size: 14px; color: #64748b;">
         <p>Ödeme yapmak için yukarıdaki butona tıklayın veya aşağıdaki linki kullanın:</p>
         <p style="word-break: break-all; background: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace;">
-            ' . esc_url($data['payment_url']) . '
+            <a href="' . esc_url($data['payment_url']) . '" target="_blank">' . esc_html($data['payment_url']) . '</a>
         </p>
     </div>
     
