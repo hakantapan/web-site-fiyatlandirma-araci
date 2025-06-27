@@ -90,7 +90,7 @@ class MorpheoCalculator {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('morpheo_calculator_nonce'),
             'booking_url' => esc_url(get_option('morpheo_booking_url', home_url('/iletisim'))),
-            'woocommerce_url' => 'https://morpheodijital.com/satis/',
+            'woocommerce_url' => get_option('morpheo_woocommerce_url', 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu'),
             'consultation_fee' => get_option('morpheo_consultation_fee', '250')
         ));
     }
