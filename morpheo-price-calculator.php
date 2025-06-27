@@ -697,16 +697,6 @@ class MorpheoCalculator {
         }
     }
     
-            
-            // Mark as reminded
-            $wpdb->update(
-                $appointments_table,
-                array('reminder_sent' => 1),
-                array('id' => $appointment->id)
-            );
-        }
-    }
-    
     public function add_cron_intervals($schedules) {
         $schedules['morpheo_10min'] = array(
             'interval' => 600, // 10 minutes
