@@ -7,154 +7,470 @@
     $results_table = $wpdb->prefix . 'morpheo_calculator_results';
     
     // Handle status updates
-    if (isset($_POST['update_status'])) {
+    if (isset($_POST['update_status']) && isset($_POST['appointment_id'])) {
         $appointment_id = intval($_POST['appointment_id']);
-        $new_status = sanitize_text_field($_POST['new_status']);
+        $new_status = sanitize_text_field($_POST['payment_status']);
+        $notes = sanitize_textarea_field($_POST['notes']);
         
-        $updated = $wpdb->update(
+        $wpdb->update(
             $appointments_table,
-            array('payment_status' => $new_status),
-            array('id' => $appointment_id)
+            array(
+                'payment_status' => $new_status,
+                'notes' => $notes,
+                'updated_at' => current_time('mysql')
+            ),
+            array('id' => $appointment_id),
+            array('%s', '%s', '%s'),
+            array('%d')
         );
         
-        if ($updated) {
-            echo '<div class="notice notice-success"><p>Randevu durumu güncellendi!</p></div>';
+        echo '<div class="notice notice-success"><p>Randevu durumu başarıyla güncellendi!</p></div>';
+    }
+    
+    // Handle API payment check
+    if (isset($_POST['check_single_payment']) && isset($_POST['appointment_id'])) {
+        $appointment_id = intval($_POST['appointment_id']);
+        
+        // Get appointment and customer data
+        $appointment = $wpdb->get_row($wpdb->prepare("
+            SELECT a.*, r.email, r.first_name, r.last_name 
+            FROM $appointments_table a 
+            LEFT JOIN $results_table r ON a.calculator_id = r.id 
+            WHERE a.id = %d
+        ", $appointment_id));
+        
+        if ($appointment && $appointment->email) {
+            $payment_status = MorpheoPaymentAPI::checkPaymentStatus($appointment->email);
+            
+            if ($payment_status && $payment_status['paid']) {
+                $wpdb->update(
+                    $appointments_table,
+                    array(
+                        'payment_status' => 'paid',
+                        'updated_at' => current_time('mysql'),
+                        'notes' => ($appointment->notes ? $appointment->notes . ' | ' : '') . 'API ile doğrulandı: ' . date('d.m.Y H:i')
+                    ),
+                    array('id' => $appointment_id),
+                    array('%s', '%s', '%s'),
+                    array('%d')
+                );
+                
+                echo '<div class="notice notice-success"><p>✅ Ödeme doğrulandı! Randevu durumu güncellendi.</p></div>';
+            } else {
+                echo '<div class="notice notice-warning"><p>⚠️ Henüz ödeme alınmamış veya API yanıtı alınamadı.</p></div>';
+            }
         }
     }
     
-    // Get appointments with pagination
-    $per_page = 20;
-    $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-    $offset = ($current_page - 1) * $per_page;
+    // Handle bulk API check
+    if (isset($_POST['bulk_api_check'])) {
+        $updated_count = MorpheoPaymentAPI::checkAllPendingPayments();
+        echo '<div class="notice notice-success"><p>🔄 Toplu kontrol tamamlandı! ' . $updated_count . ' randevu güncellendi.</p></div>';
+    }
     
-    $total_appointments = $wpdb->get_var("
-        SELECT COUNT(*) 
-        FROM $appointments_table a 
-        LEFT JOIN $results_table r ON a.calculator_id = r.id
-    ");
+    // Handle appointment deletion
+    if (isset($_POST['delete_appointment']) && isset($_POST['appointment_id'])) {
+        $appointment_id = intval($_POST['appointment_id']);
+        
+        $wpdb->delete(
+            $appointments_table,
+            array('id' => $appointment_id),
+            array('%d')
+        );
+        
+        echo '<div class="notice notice-success"><p>Randevu başarıyla silindi!</p></div>';
+    }
     
+    // Get appointments with customer info
     $appointments = $wpdb->get_results("
-        SELECT a.*, r.first_name, r.last_name, r.email, r.phone, r.website_type_tr, r.price_range
+        SELECT a.*, r.first_name, r.last_name, r.email, r.phone, r.website_type, r.min_price, r.max_price
         FROM $appointments_table a 
         LEFT JOIN $results_table r ON a.calculator_id = r.id 
-        ORDER BY a.created_at DESC 
-        LIMIT $per_page OFFSET $offset
+        ORDER BY a.appointment_date DESC, a.appointment_time DESC
     ");
     
-    $total_pages = ceil($total_appointments / $per_page);
+    // Filter options
+    $status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+    $date_filter = isset($_GET['date']) ? sanitize_text_field($_GET['date']) : '';
     ?>
     
+    <!-- Filters -->
     <div class="tablenav top">
-        <div class="alignleft actions">
-            <span class="displaying-num"><?php echo $total_appointments; ?> öğe</span>
+        <form method="get" style="display: inline-block;">
+            <input type="hidden" name="page" value="morpheo-calculator-appointments">
+            <select name="status">
+                <option value="">Tüm Durumlar</option>
+                <option value="pending" <?php selected($status_filter, 'pending'); ?>>Beklemede</option>
+                <option value="paid" <?php selected($status_filter, 'paid'); ?>>Ödendi</option>
+                <option value="confirmed" <?php selected($status_filter, 'confirmed'); ?>>Onaylandı</option>
+                <option value="completed" <?php selected($status_filter, 'completed'); ?>>Tamamlandı</option>
+                <option value="cancelled" <?php selected($status_filter, 'cancelled'); ?>>İptal</option>
+            </select>
+            <input type="date" name="date" value="<?php echo $date_filter; ?>" placeholder="Tarih Filtresi">
+            <input type="submit" class="button" value="Filtrele">
+            <a href="?page=morpheo-calculator-appointments" class="button">Temizle</a>
+        </form>
+        
+        <div style="float: right; margin-left: 10px;">
+            <form method="post" style="display: inline-block;">
+                <input type="hidden" name="bulk_api_check" value="1">
+                <button type="submit" class="button button-secondary">🔄 Tüm Ödemeleri API ile Kontrol Et</button>
+            </form>
         </div>
-        <?php if ($total_pages > 1): ?>
-        <div class="tablenav-pages">
-            <span class="pagination-links">
-                <?php
-                $page_links = paginate_links(array(
-                    'base' => add_query_arg('paged', '%#%'),
-                    'format' => '',
-                    'prev_text' => '&laquo;',
-                    'next_text' => '&raquo;',
-                    'total' => $total_pages,
-                    'current' => $current_page
-                ));
-                echo $page_links;
-                ?>
-            </span>
+        
+        <div style="float: right;">
+            <button id="add-manual-appointment" class="button button-primary">Manuel Randevu Ekle</button>
         </div>
-        <?php endif; ?>
     </div>
     
+    <!-- Appointments Table -->
     <table class="wp-list-table widefat fixed striped">
         <thead>
             <tr>
-                <th>ID</th>
+                <th style="width: 60px;">ID</th>
                 <th>Müşteri</th>
                 <th>İletişim</th>
-                <th>Proje</th>
                 <th>Randevu</th>
+                <th>Proje Tipi</th>
+                <th>Tahmini Fiyat</th>
                 <th>Durum</th>
-                <th>Tutar</th>
-                <th>Oluşturulma</th>
-                <th>İşlemler</th>
+                <th>Ücret</th>
+                <th style="width: 280px;">İşlemler</th>
             </tr>
         </thead>
         <tbody>
-            <?php if (empty($appointments)): ?>
-            <tr>
-                <td colspan="9" style="text-align: center; padding: 20px;">
-                    Henüz randevu bulunmuyor.
-                </td>
-            </tr>
-            <?php else: ?>
-            <?php foreach ($appointments as $appointment): ?>
-            <tr>
+            <?php 
+            $filtered_appointments = $appointments;
+            
+            // Apply filters
+            if ($status_filter) {
+                $filtered_appointments = array_filter($filtered_appointments, function($app) use ($status_filter) {
+                    return $app->payment_status === $status_filter;
+                });
+            }
+            
+            if ($date_filter) {
+                $filtered_appointments = array_filter($filtered_appointments, function($app) use ($date_filter) {
+                    return $app->appointment_date === $date_filter;
+                });
+            }
+            
+            foreach ($filtered_appointments as $appointment): 
+                $status_class = 'status-' . $appointment->payment_status;
+                $is_past = strtotime($appointment->appointment_date . ' ' . $appointment->appointment_time) < time();
+            ?>
+            <tr class="<?php echo $is_past ? 'past-appointment' : ''; ?>">
                 <td><?php echo $appointment->id; ?></td>
                 <td>
                     <strong><?php echo esc_html($appointment->first_name . ' ' . $appointment->last_name); ?></strong>
+                    <?php if ($appointment->notes): ?>
+                        <br><small class="description"><?php echo esc_html($appointment->notes); ?></small>
+                    <?php endif; ?>
                 </td>
                 <td>
                     <a href="mailto:<?php echo esc_attr($appointment->email); ?>"><?php echo esc_html($appointment->email); ?></a><br>
-                    <small><a href="tel:<?php echo esc_attr($appointment->phone); ?>"><?php echo esc_html($appointment->phone); ?></a></small>
+                    <a href="tel:<?php echo esc_attr($appointment->phone); ?>"><?php echo esc_html($appointment->phone); ?></a>
                 </td>
                 <td>
-                    <strong><?php echo esc_html($appointment->website_type_tr); ?></strong><br>
-                    <small><?php echo esc_html($appointment->price_range); ?></small>
+                    <strong><?php echo date('d.m.Y', strtotime($appointment->appointment_date)); ?></strong><br>
+                    <span class="time-slot"><?php echo date('H:i', strtotime($appointment->appointment_time)); ?></span>
+                    <?php if ($is_past): ?>
+                        <br><small class="description">Geçmiş</small>
+                    <?php endif; ?>
+                </td>
+                <td><?php echo esc_html(ucfirst($appointment->website_type)); ?></td>
+                <td>
+                    <?php if ($appointment->min_price && $appointment->max_price): ?>
+                        <?php echo number_format($appointment->min_price, 0, ',', '.') . ' - ' . number_format($appointment->max_price, 0, ',', '.') . ' ₺'; ?>
+                    <?php else: ?>
+                        -
+                    <?php endif; ?>
                 </td>
                 <td>
-                    <?php echo date('d.m.Y', strtotime($appointment->appointment_date)); ?><br>
-                    <small><?php echo date('H:i', strtotime($appointment->appointment_time)); ?></small>
-                </td>
-                <td>
-                    <span class="appointment-status status-<?php echo $appointment->payment_status; ?>">
-                        <?php
-                        switch($appointment->payment_status) {
-                            case 'pending': echo '⏳ Bekliyor'; break;
-                            case 'paid': echo '✅ Ödendi'; break;
-                            case 'cancelled': echo '❌ İptal'; break;
-                            default: echo $appointment->payment_status;
-                        }
+                    <span class="status-badge <?php echo $status_class; ?>">
+                        <?php 
+                        $status_labels = array(
+                            'pending' => 'Beklemede',
+                            'paid' => 'Ödendi',
+                            'confirmed' => 'Onaylandı',
+                            'completed' => 'Tamamlandı',
+                            'cancelled' => 'İptal'
+                        );
+                        echo $status_labels[$appointment->payment_status] ?? ucfirst($appointment->payment_status);
                         ?>
                     </span>
                 </td>
                 <td><?php echo number_format($appointment->payment_amount, 0, ',', '.'); ?> ₺</td>
                 <td>
-                    <?php echo date('d.m.Y H:i', strtotime($appointment->created_at)); ?>
-                </td>
-                <td>
-                    <div class="appointment-actions">
-                        <form method="post" style="display: inline;">
-                            <input type="hidden" name="appointment_id" value="<?php echo $appointment->id; ?>">
-                            <select name="new_status" onchange="this.form.submit()">
-                                <option value="">Durum Değiştir</option>
-                                <option value="pending" <?php selected($appointment->payment_status, 'pending'); ?>>Bekliyor</option>
-                                <option value="paid" <?php selected($appointment->payment_status, 'paid'); ?>>Ödendi</option>
-                                <option value="cancelled" <?php selected($appointment->payment_status, 'cancelled'); ?>>İptal</option>
-                            </select>
-                            <input type="hidden" name="update_status" value="1">
-                        </form>
-                        
-                        <?php if (!empty($appointment->payment_url)): ?>
-                        <a href="<?php echo esc_url($appointment->payment_url); ?>" target="_blank" class="button button-small">
-                            💳 Ödeme Linki
-                        </a>
-                        <?php endif; ?>
-                        
-                        <a href="mailto:<?php echo esc_attr($appointment->email); ?>?subject=Randevunuz Hakkında" class="button button-small">
-                            ✉️ E-posta Gönder
-                        </a>
-                    </div>
+                    <button class="button button-small edit-appointment" 
+                            data-id="<?php echo $appointment->id; ?>"
+                            data-status="<?php echo $appointment->payment_status; ?>"
+                            data-notes="<?php echo esc_attr($appointment->notes); ?>">
+                        Düzenle
+                    </button>
+                    
+                    <?php if ($appointment->payment_status === 'pending' && $appointment->email): ?>
+                    <button class="button button-small api-check-btn" 
+                            data-id="<?php echo $appointment->id; ?>"
+                            data-email="<?php echo esc_attr($appointment->email); ?>">
+                        🔍 API Kontrol
+                    </button>
+                    <?php endif; ?>
+                    
+                    <button class="button button-small button-link-delete delete-appointment" 
+                            data-id="<?php echo $appointment->id; ?>">
+                        Sil
+                    </button>
                 </td>
             </tr>
             <?php endforeach; ?>
+            
+            <?php if (empty($filtered_appointments)): ?>
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 40px;">
+                    <em>Henüz randevu bulunmuyor.</em>
+                </td>
+            </tr>
             <?php endif; ?>
         </tbody>
     </table>
     
-    <?php if ($total_pages > 1): ?>
-    <div class="tablenav bottom">
-        <div class="tablenav-pages">
-            <span class="pagination-links">
-                <?php echo $page
+    <!-- Statistics -->
+    <div class="appointment-stats">
+        <h3>Randevu İstatistikleri</h3>
+        <?php
+        $stats = array(
+            'total' => count($appointments),
+            'pending' => count(array_filter($appointments, function($a) { return $a->payment_status === 'pending'; })),
+            'paid' => count(array_filter($appointments, function($a) { return $a->payment_status === 'paid'; })),
+            'confirmed' => count(array_filter($appointments, function($a) { return $a->payment_status === 'confirmed'; })),
+            'completed' => count(array_filter($appointments, function($a) { return $a->payment_status === 'completed'; })),
+            'cancelled' => count(array_filter($appointments, function($a) { return $a->payment_status === 'cancelled'; }))
+        );
+        
+        $total_revenue = array_sum(array_map(function($a) { 
+            return in_array($a->payment_status, ['paid', 'completed']) ? $a->payment_amount : 0; 
+        }, $appointments));
+        ?>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number"><?php echo $stats['total']; ?></div>
+                <div class="stat-label">Toplam Randevu</div>
+            </div>
+            <div class="stat-card pending">
+                <div class="stat-number"><?php echo $stats['pending']; ?></div>
+                <div class="stat-label">Beklemede</div>
+            </div>
+            <div class="stat-card confirmed">
+                <div class="stat-number"><?php echo $stats['confirmed']; ?></div>
+                <div class="stat-label">Onaylandı</div>
+            </div>
+            <div class="stat-card completed">
+                <div class="stat-number"><?php echo $stats['completed']; ?></div>
+                <div class="stat-label">Tamamlandı</div>
+            </div>
+            <div class="stat-card revenue">
+                <div class="stat-number"><?php echo number_format($total_revenue, 0, ',', '.'); ?> ₺</div>
+                <div class="stat-label">Toplam Gelir</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Appointment Modal -->
+<div id="edit-appointment-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">Randevu Düzenle</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-appointment-form" method="post">
+                <input type="hidden" name="appointment_id" id="edit-appointment-id">
+                <input type="hidden" name="update_status" value="1">
+                
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Durum</th>
+                        <td>
+                            <select name="payment_status" id="edit-payment-status">
+                                <option value="pending">Beklemede</option>
+                                <option value="paid">Ödendi</option>
+                                <option value="confirmed">Onaylandı</option>
+                                <option value="completed">Tamamlandı</option>
+                                <option value="cancelled">İptal</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Notlar</th>
+                        <td>
+                            <textarea name="notes" id="edit-notes" rows="4" cols="50" placeholder="Randevu ile ilgili notlar..."></textarea>
+                        </td>
+                    </tr>
+                </table>
+                
+                <p class="submit">
+                    <input type="submit" class="button button-primary" value="Güncelle">
+                    <button type="button" class="button modal-close">İptal</button>
+                </p>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-pending { background: #fff3cd; color: #856404; }
+.status-paid { background: #d1ecf1; color: #0c5460; }
+.status-confirmed { background: #d4edda; color: #155724; }
+.status-completed { background: #d4edda; color: #155724; font-weight: bold; }
+.status-cancelled { background: #f8d7da; color: #721c24; }
+
+.past-appointment {
+    opacity: 0.7;
+    background-color: #f8f9fa;
+}
+
+.appointment-stats {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007cba;
+}
+
+.stat-card.pending { border-left-color: #f59e0b; }
+.stat-card.confirmed { border-left-color: #10b981; }
+.stat-card.completed { border-left-color: #059669; }
+.stat-card.revenue { border-left-color: #8b5cf6; }
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #1d4ed8;
+    display: block;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.time-slot {
+    background: #e3f2fd;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.api-check-btn {
+    background-color: #0073aa !important;
+    color: white !important;
+    border-color: #0073aa !important;
+}
+
+.api-check-btn:hover {
+    background-color: #005a87 !important;
+    border-color: #005a87 !important;
+}
+
+.api-check-btn:disabled {
+    background-color: #ccc !important;
+    border-color: #ccc !important;
+    cursor: not-allowed !important;
+}
+
+.view-api-response {
+    background-color: #6c757d !important;
+    color: white !important;
+    border-color: #6c757d !important;
+}
+
+.api-response-modal h3 {
+    margin-bottom: 20px;
+    color: #1d4ed8;
+}
+
+.api-response-modal h4 {
+    margin: 20px 0 10px 0;
+    color: #374151;
+}
+
+.api-info {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.api-info p {
+    margin: 5px 0;
+}
+</style>
+
+<script>
+jQuery(document).ready(function($) {
+    // Edit appointment
+    $('.edit-appointment').on('click', function() {
+        var id = $(this).data('id');
+        var status = $(this).data('status');
+        var notes = $(this).data('notes');
+        
+        $('#edit-appointment-id').val(id);
+        $('#edit-payment-status').val(status);
+        $('#edit-notes').val(notes);
+        $('#edit-appointment-modal').show();
+    });
+    
+    // Delete appointment
+    $('.delete-appointment').on('click', function() {
+        if (confirm('Bu randevuyu silmek istediğinizden emin misiniz?')) {
+            var id = $(this).data('id');
+            var form = $('<form method="post">' +
+                '<input type="hidden" name="appointment_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_appointment" value="1">' +
+                '</form>');
+            $('body').append(form);
+            form.submit();
+        }
+    });
+    
+    // Close modal
+    $('.modal-close').on('click', function() {
+        $('#edit-appointment-modal').hide();
+    });
+    
+    // Close modal on outside click
+    $('#edit-appointment-modal').on('click', function(e) {
+        if (e.target === this) {
+            $(this).hide();
+        }
+    });
+});
+</script>

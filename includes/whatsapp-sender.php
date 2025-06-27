@@ -128,18 +128,14 @@ class MorpheoWhatsAppSender {
      * Sends a WhatsApp confirmation message to the customer after appointment booking.
      */
     public static function sendCustomerConfirmationWhatsApp($appointment_data, $calculator_data, $payment_url = '') {
-        $consultation_fee = get_option('morpheo_consultation_fee', '250');
-        
         $message = "🎉 Merhaba " . $calculator_data->first_name . " " . $calculator_data->last_name . ",\n\n";
         $message .= "Randevunuz başarıyla oluşturuldu!\n\n";
         $message .= "📅 *Tarih:* " . date('d.m.Y', strtotime($appointment_data['appointment_date'])) . "\n";
         $message .= "🕐 *Saat:* " . $appointment_data['appointment_time'] . "\n";
-        $message .= "💰 *Konsültasyon Ücreti:* " . number_format($consultation_fee, 0, ',', '.') . " ₺\n\n";
+        $message .= "💰 *Konsültasyon Ücreti:* " . number_format(get_option('morpheo_consultation_fee', '250'), 0, ',', '.') . " ₺\n\n";
         
         if (!empty($payment_url)) {
-            // Ensure the URL is on its own line for better WhatsApp parsing
-            $message .= "💳 *Ödeme yapmak için:*\n";
-            $message .= $payment_url . "\n\n"; 
+            $message .= "💳 *Ödeme yapmak için:*\n" . $payment_url . "\n\n";
             $message .= "⚠️ *Önemli:* Ödeme işlemini 15 dakika içinde tamamlamazsanız randevunuz iptal olacaktır.\n\n";
         } else {
             $message .= "✅ Ödemeniz alınmıştır. Randevunuz onaylandı.\n\n";
@@ -155,18 +151,14 @@ class MorpheoWhatsAppSender {
      * Sends a WhatsApp notification message to the admin after a new appointment booking.
      */
     public static function sendAdminNotificationWhatsApp($appointment_data, $calculator_data) {
-        $consultation_fee = get_option('morpheo_consultation_fee', '250');
-        $estimated_price = number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺';
-        
         $message = "🚨 *YENİ RANDEVU BİLDİRİMİ!*\n\n";
         $message .= "👤 *Müşteri:* " . $calculator_data->first_name . " " . $calculator_data->last_name . "\n";
         $message .= "📞 *Telefon:* " . $calculator_data->phone . "\n";
         $message .= "📧 *E-posta:* " . $calculator_data->email . "\n";
         $message .= "📅 *Randevu:* " . date('d.m.Y', strtotime($appointment_data['appointment_date'])) . " " . $appointment_data['appointment_time'] . "\n";
         $message .= "🌐 *Proje Tipi:* " . self::getProjectTypeName($calculator_data->website_type) . "\n";
-        $message .= "💰 *Tahmini Fiyat:* " . $estimated_price . "\n";
-        $message .= "💳 *Konsültasyon Ücreti:* " . number_format($consultation_fee, 0, ',', '.') . " ₺\n";
-        $message .= "📊 *Ödeme Durumu:* Beklemede\n\n";
+        $message .= "💰 *Tahmini Fiyat:* " . number_format($calculator_data->min_price, 0, ',', '.') . " - " . number_format($calculator_data->max_price, 0, ',', '.') . " ₺\n";
+        $message .= "💳 *Ödeme Durumu:* Beklemede\n\n";
         $message .= "🏃‍♂️ Hemen iletişime geçin!";
 
         // Send to the configured 'from' number, assuming it's an admin's number.
@@ -195,15 +187,12 @@ class MorpheoWhatsAppSender {
      * Sends a WhatsApp reminder message for pending payments.
      */
     public static function sendPaymentReminderWhatsApp($appointment_data, $calculator_data, $payment_url) {
-        $minutes_left = MorpheoPaymentReminder::getMinutesLeft($appointment_data['created_at']);
-        
         $message = "⚠️ *ACIL: Randevunuz İptal Olmak Üzere!*\n\n";
         $message .= "Merhaba " . $calculator_data->first_name . " " . $calculator_data->last_name . ",\n\n";
         $message .= "📅 Randevunuz için ödeme bekleniyor.\n";
-        $message .= "⏰ Kalan süre: " . $minutes_left . " dakika.\n\n";
+        $message .= "⏰ Kalan süre: " . MorpheoPaymentReminder::getMinutesLeft($appointment_data['created_at']) . " dakika.\n\n";
         $message .= "❌ Ödeme yapılmazsa randevunuz otomatik olarak iptal olacaktır!\n\n";
-        $message .= "💳 *Hemen ödeme yapın:*\n";
-        $message .= $payment_url . "\n\n";
+        $message .= "💳 *Hemen ödeme yapın:*\n" . $payment_url . "\n\n";
         $message .= "📞 Yardım için: Morpheo Dijital";
         
         return self::sendMessage($calculator_data->phone, $message);
@@ -236,135 +225,4 @@ class MorpheoWhatsAppSender {
         );
         return $types[$type] ?? 'Belirtilmemiş';
     }
-
-    /**
-     * Sends a WhatsApp confirmation message to the customer after appointment booking.
-     */
-    public function send_appointment_confirmation($phone, $name, $date, $time, $payment_url, $payment_params = array()) {
-        $whatsapp_token = get_option('morpheo_whatsapp_token', '');
-        $whatsapp_phone = get_option('morpheo_whatsapp_phone', '');
-        
-        if (empty($whatsapp_token) || empty($whatsapp_phone)) {
-            return false;
-        }
-        
-        // Format phone number
-        $phone = $this->format_phone_number($phone);
-        if (!$phone) {
-            return false;
-        }
-        
-        // Create message with payment parameters
-        $formatted_date = date('d.m.Y', strtotime($date));
-        $formatted_time = date('H:i', strtotime($time));
-        
-        $message = "🎉 Merhaba {$name}!\n\n";
-        $message .= "Randevunuz başarıyla oluşturuldu:\n";
-        $message .= "📅 Tarih: {$formatted_date}\n";
-        $message .= "🕐 Saat: {$formatted_time}\n\n";
-        $message .= "💳 Randevunuzu onaylamak için lütfen ödemenizi tamamlayın:\n\n";
-        $message .= $payment_url . "\n\n";
-        $message .= "❗ Önemli: Ödemenizi 24 saat içinde tamamlamazsanız randevunuz iptal edilecektir.\n\n";
-        $message .= "Herhangi bir sorunuz varsa bize ulaşabilirsiniz.\n\n";
-        $message .= "Teşekkürler! 🙏\n";
-        $message .= "Morpheo Dijital Ekibi";
-        
-        return $this->send_whatsapp_message($phone, $message);
-    }
-    
-    /**
-     * Sends a WhatsApp reminder message for pending payments.
-     */
-    public function send_payment_reminder($phone, $name, $date, $time, $payment_url, $payment_params = array()) {
-        $whatsapp_token = get_option('morpheo_whatsapp_token', '');
-        $whatsapp_phone = get_option('morpheo_whatsapp_phone', '');
-        
-        if (empty($whatsapp_token) || empty($whatsapp_phone)) {
-            return false;
-        }
-        
-        // Format phone number
-        $phone = $this->format_phone_number($phone);
-        if (!$phone) {
-            return false;
-        }
-        
-        // Create reminder message with payment parameters
-        $formatted_date = date('d.m.Y', strtotime($date));
-        $formatted_time = date('H:i', strtotime($time));
-        
-        $message = "⏰ Merhaba {$name}!\n\n";
-        $message .= "Randevunuz için ödeme hatırlatması:\n";
-        $message .= "📅 Tarih: {$formatted_date}\n";
-        $message .= "🕐 Saat: {$formatted_time}\n\n";
-        $message .= "💳 Randevunuzu kaybetmemek için lütfen ödemenizi tamamlayın:\n\n";
-        $message .= $payment_url . "\n\n";
-        $message .= "⚠️ Ödemenizi yakında tamamlamazsanız randevunuz iptal edilecektir.\n\n";
-        $message .= "Teşekkürler! 🙏\n";
-        $message .= "Morpheo Dijital Ekibi";
-        
-        return $this->send_whatsapp_message($phone, $message);
-    }
-    
-    private function send_whatsapp_message($phone, $message) {
-        $whatsapp_token = get_option('morpheo_whatsapp_token', '');
-        $whatsapp_phone = get_option('morpheo_whatsapp_phone', '');
-        
-        // WhatsApp Business API endpoint
-        $url = "https://graph.facebook.com/v17.0/{$whatsapp_phone}/messages";
-        
-        $data = array(
-            'messaging_product' => 'whatsapp',
-            'to' => $phone,
-            'type' => 'text',
-            'text' => array(
-                'body' => $message
-            )
-        );
-        
-        $response = wp_remote_post($url, array(
-            'headers' => array(
-                'Authorization' => 'Bearer ' . $whatsapp_token,
-                'Content-Type' => 'application/json'
-            ),
-            'body' => json_encode($data),
-            'timeout' => 30
-        ));
-        
-        if (is_wp_error($response)) {
-            error_log('WhatsApp API Error: ' . $response->get_error_message());
-            return false;
-        }
-        
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-        
-        if ($response_code === 200) {
-            error_log('WhatsApp message sent successfully to: ' . $phone);
-            return true;
-        } else {
-            error_log('WhatsApp API Error: ' . $response_body);
-            return false;
-        }
-    }
-    
-    private function format_phone_number($phone) {
-        // Remove all non-numeric characters
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-        
-        // Add country code if not present
-        if (strlen($phone) === 10 && substr($phone, 0, 1) === '5') {
-            $phone = '90' . $phone;
-        } elseif (strlen($phone) === 11 && substr($phone, 0, 1) === '0') {
-            $phone = '90' . substr($phone, 1);
-        }
-        
-        // Validate Turkish phone number format
-        if (strlen($phone) === 12 && substr($phone, 0, 2) === '90') {
-            return $phone;
-        }
-        
-        return false;
-    }
 }
-?>

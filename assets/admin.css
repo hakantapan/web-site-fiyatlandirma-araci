@@ -1,21 +1,21 @@
+/* Admin Styles for Morpheo Dijital Calculator */
 .morpheo-admin {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  max-width: 1200px;
 }
 
 .card {
   background: #fff;
   border: 1px solid #ccd0d4;
   border-radius: 4px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
-  margin: 20px 0;
   padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
 .card h2 {
   margin-top: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #23282d;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
 }
 
 .stats-grid {
@@ -26,121 +26,129 @@
 }
 
 .stat-card {
-  background: #fff;
-  border: 1px solid #e1e1e1;
-  border-left: 4px solid #0073aa;
-  border-radius: 4px;
+  background: #f8f9fa;
   padding: 20px;
+  border-radius: 8px;
   text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #00ff00;
 }
 
 .stat-number {
-  font-size: 32px;
+  font-size: 2rem;
   font-weight: bold;
-  color: #23282d;
-  margin-bottom: 8px;
+  color: #00cc00;
+  display: block;
 }
 
 .stat-label {
-  font-size: 14px;
   color: #666;
-  font-weight: 500;
+  font-size: 0.9rem;
+  margin-top: 5px;
 }
 
-.stat-card.pending {
-  border-left-color: #f59e0b;
-}
-
-.stat-card.confirmed {
-  border-left-color: #10b981;
-}
-
-.stat-card.cancelled {
-  border-left-color: #ef4444;
-}
-
-.stat-card.revenue {
-  border-left-color: #8b5cf6;
-}
-
-.appointment-status {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.status-pending {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.status-paid {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.status-cancelled {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.appointment-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.appointment-actions .button {
-  font-size: 12px;
-  padding: 4px 8px;
-  height: auto;
-  line-height: 1.4;
-}
-
-.expired-payment {
-  background-color: #fef2f2 !important;
-  opacity: 0.7;
-}
-
-.payment-url {
-  font-family: monospace;
-  font-size: 12px;
-  background: #f8f9fa;
-  padding: 8px;
-  border-radius: 4px;
-  word-break: break-all;
-  max-width: 300px;
-}
-
-.form-table th {
-  width: 200px;
-  font-weight: 600;
-}
-
-.notice {
+.export-buttons {
   margin: 20px 0;
 }
 
+.export-buttons .button {
+  margin-right: 10px;
+}
+
+/* Table enhancements */
+.wp-list-table .column-actions {
+  width: 150px;
+}
+
+.wp-list-table .button-small {
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-dialog {
+  background: #fff;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-value {
+  color: #666;
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }
 
-  .appointment-actions {
-    flex-direction: column;
+  .modal-dialog {
+    width: 95%;
+    margin: 20px;
   }
 
-  .appointment-actions .button {
-    width: 100%;
-    text-align: center;
+  .detail-row {
+    flex-direction: column;
+    gap: 4px;
   }
 }

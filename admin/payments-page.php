@@ -67,7 +67,7 @@
             <tr>
                 <th scope="row">API Key</th>
                 <td>
-                    <code>t3RcN@f9h$5!ZxLuQ1W#pK7eMv%25BdA82</code>
+                    <code>t3RcN@f9h$5!ZxLuQ1W#pK7eMv%BdA82</code>
                     <p class="description">API güvenlik anahtarı</p>
                 </td>
             </tr>

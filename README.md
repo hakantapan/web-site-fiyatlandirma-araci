@@ -1,72 +1,32 @@
-# Morpheo Web Sitesi Fiyatlandırma Aracı
+# Morpheo Dijital Website Price Calculator
 
-WordPress eklentisi olarak geliştirilmiş, web sitesi projelerinin fiyatlandırılması ve randevu rezervasyonu için gelişmiş hesaplama aracı.
+A WordPress plugin for estimating website project costs and allowing visitors to book an appointment.
 
-## Özellikler
+## Installation
 
-- **Akıllı Fiyatlandırma**: Proje türü, sayfa sayısı, özellikler ve tasarım karmaşıklığına göre otomatik fiyat hesaplama
-- **Randevu Sistemi**: Entegre randevu rezervasyon sistemi
-- **Ödeme Entegrasyonu**: WooCommerce ile ödeme takibi
-- **E-posta Bildirimleri**: Otomatik onay ve hatırlatma e-postaları
-- **WhatsApp Entegrasyonu**: WhatsApp Business API ile mesaj gönderimi
-- **Ödeme Takibi**: Gerçek zamanlı ödeme durumu kontrolü
-- **Admin Paneli**: Kapsamlı yönetim ve raporlama
+1. Copy the plugin folder into your WordPress installation under `wp-content/plugins`.
+2. In the admin dashboard open **Plugins** and activate **Morpheo Dijital Website Price Calculator**.
+3. Activation will create the database tables used to store calculation results and appointments.
 
-## Kurulum
+## Settings
 
-1. Eklenti dosyalarını `/wp-content/plugins/morpheo-calculator/` dizinine yükleyin
-2. WordPress admin panelinden eklentiyi etkinleştirin
-3. `Morpheo Calculator` menüsünden ayarları yapılandırın
+Navigate to **Price Calculator → Settings** in the WordPress admin menu.
 
-## Kullanım
+- **Appointment Redirect URL** – URL of the page that opens when a visitor confirms an appointment. This is usually a contact form or booking page. Update the value and save changes.
 
-### Shortcode
-Hesaplama aracını herhangi bir sayfada göstermek için:
+## Usage
+
+Add the shortcode `[morpheo_web_calculator]` to any post or page where you want the calculator displayed.
+
+### Shortcode parameters
+
+- `theme` – `dark` (default) or `light` to set the initial theme.
+- `show_appointment` – `true` (default) or `false` to hide the appointment booking step.
+
+Example:
+
 \`\`\`
-[morpheo_calculator]
+[morpheo_web_calculator theme="light" show_appointment="false"]
 \`\`\`
 
-### Admin Ayarları
-- **WooCommerce URL**: Ödeme sayfasının URL'si
-- **WhatsApp Entegrasyonu**: WhatsApp Business API ayarları
-- **E-posta Ayarları**: SMTP ve e-posta şablonları
-
-## Teknik Detaylar
-
-### Veritabanı Tabloları
-- `wp_morpheo_calculator_results`: Hesaplama sonuçları
-- `wp_morpheo_calculator_appointments`: Randevu kayıtları
-
-### Cron Jobs
-- **Ödeme Hatırlatma**: Saatlik çalışır
-- **Ödeme Kontrolü**: 10 dakikada bir çalışır
-
-### API Entegrasyonları
-- WooCommerce ödeme sistemi
-- WhatsApp Business API
-- E-posta SMTP
-
-## Sürüm Geçmişi
-
-### v2.2.4
-- Ödeme linklerinde tüm parametrelerin eklenmesi
-- Payment API hata düzeltmeleri
-- Admin paneli iyileştirmeleri
-
-### v2.2.3
-- WhatsApp entegrasyonu iyileştirmeleri
-- E-posta şablonları güncelleme
-- Ödeme URL parametreleri
-
-### v2.2.2
-- Ödeme takip sistemi
-- Otomatik ödeme kontrolü
-- Admin dashboard
-
-## Destek
-
-Teknik destek için: info@morpheodijital.com
-
-## Lisans
-
-Bu eklenti Morpheo Dijital tarafından geliştirilmiştir.
+Save the page and visit it on the front‑end to see the calculator in action.
