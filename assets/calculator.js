@@ -538,14 +538,105 @@
     }
   }
 
+  // Update the calculateAndShowPrice function to include loading animation
+
   function calculateAndShowPrice() {
-    const price = calculatePrice()
+    // Show loading overlay
+    showLoadingOverlay()
 
-    // Save data to database
-    saveCalculatorData(price)
+    // Simulate calculation steps with delays for better UX
+    setTimeout(() => {
+      updateCalculationStep(1, "active")
 
-    // Show price modal with detailed breakdown
-    showPriceModal(price)
+      setTimeout(() => {
+        updateCalculationStep(1, "completed")
+        updateCalculationStep(2, "active")
+
+        setTimeout(() => {
+          updateCalculationStep(2, "completed")
+          updateCalculationStep(3, "active")
+
+          setTimeout(() => {
+            updateCalculationStep(3, "completed")
+            updateCalculationStep(4, "active")
+
+            setTimeout(() => {
+              updateCalculationStep(4, "completed")
+
+              // Actually calculate the price
+              const price = calculatePrice()
+
+              // Save data to database
+              saveCalculatorData(price)
+
+              setTimeout(() => {
+                // Hide loading and show price modal
+                hideLoadingOverlay()
+                showPriceModal(price)
+              }, 500)
+            }, 800)
+          }, 600)
+        }, 700)
+      }, 500)
+    }, 300)
+  }
+
+  function showLoadingOverlay() {
+    const loadingHtml = `
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">
+          Teklifiniz Hazırlanıyor<span class="loading-dots"></span>
+        </div>
+        <div class="loading-description">
+          Size özel fiyat hesaplaması yapılıyor
+        </div>
+        
+        <div class="calculation-steps">
+          <div class="calculation-step" id="step-1">
+            <span class="step-icon">📊</span>
+            <span>Proje türü analiz ediliyor</span>
+          </div>
+          <div class="calculation-step" id="step-2">
+            <span class="step-icon">📄</span>
+            <span>Sayfa sayısı hesaplanıyor</span>
+          </div>
+          <div class="calculation-step" id="step-3">
+            <span class="step-icon">🎨</span>
+            <span>Tasarım karmaşıklığı değerlendiriliyor</span>
+          </div>
+          <div class="calculation-step" id="step-4">
+            <span class="step-icon">💰</span>
+            <span>Fiyat aralığı belirleniyor</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+
+    $("body").append(loadingHtml)
+
+    // Reset all steps
+    $(".calculation-step").removeClass("active completed")
+  }
+
+  function hideLoadingOverlay() {
+    $("#loading-overlay").addClass("hidden")
+    setTimeout(() => {
+      $("#loading-overlay").remove()
+    }, 300)
+  }
+
+  function updateCalculationStep(stepNumber, status) {
+    const step = $(`#step-${stepNumber}`)
+
+    if (status === "active") {
+      step.addClass("active").removeClass("completed")
+    } else if (status === "completed") {
+      step.removeClass("active").addClass("completed")
+      step.find(".step-icon").html("✅")
+    }
   }
 
   function showPriceModal(price) {
@@ -820,7 +911,7 @@
             musteri_adi: calculatorData.userData.firstName + " " + calculatorData.userData.lastName,
             musteri_email: calculatorData.userData.email,
             musteri_telefon: calculatorData.userData.phone,
-            proje_tipi: calculatorData.websiteType,
+            proje_tipi: websiteTypes[calculatorData.websiteType]?.name || "Bilinmeyen Proje Tipi",
             tahmini_fiyat: $("#price-range").text(),
             calculator_id: calculatorData.calculatorId || "",
             appointment_id: response.data.appointment_id,
