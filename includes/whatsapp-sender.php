@@ -236,4 +236,135 @@ class MorpheoWhatsAppSender {
         );
         return $types[$type] ?? 'Belirtilmemiş';
     }
+
+    /**
+     * Sends a WhatsApp confirmation message to the customer after appointment booking.
+     */
+    public function send_appointment_confirmation($phone, $name, $date, $time, $payment_url, $payment_params = array()) {
+        $whatsapp_token = get_option('morpheo_whatsapp_token', '');
+        $whatsapp_phone = get_option('morpheo_whatsapp_phone', '');
+        
+        if (empty($whatsapp_token) || empty($whatsapp_phone)) {
+            return false;
+        }
+        
+        // Format phone number
+        $phone = $this->format_phone_number($phone);
+        if (!$phone) {
+            return false;
+        }
+        
+        // Create message with payment parameters
+        $formatted_date = date('d.m.Y', strtotime($date));
+        $formatted_time = date('H:i', strtotime($time));
+        
+        $message = "🎉 Merhaba {$name}!\n\n";
+        $message .= "Randevunuz başarıyla oluşturuldu:\n";
+        $message .= "📅 Tarih: {$formatted_date}\n";
+        $message .= "🕐 Saat: {$formatted_time}\n\n";
+        $message .= "💳 Randevunuzu onaylamak için lütfen ödemenizi tamamlayın:\n\n";
+        $message .= $payment_url . "\n\n";
+        $message .= "❗ Önemli: Ödemenizi 24 saat içinde tamamlamazsanız randevunuz iptal edilecektir.\n\n";
+        $message .= "Herhangi bir sorunuz varsa bize ulaşabilirsiniz.\n\n";
+        $message .= "Teşekkürler! 🙏\n";
+        $message .= "Morpheo Dijital Ekibi";
+        
+        return $this->send_whatsapp_message($phone, $message);
+    }
+    
+    /**
+     * Sends a WhatsApp reminder message for pending payments.
+     */
+    public function send_payment_reminder($phone, $name, $date, $time, $payment_url, $payment_params = array()) {
+        $whatsapp_token = get_option('morpheo_whatsapp_token', '');
+        $whatsapp_phone = get_option('morpheo_whatsapp_phone', '');
+        
+        if (empty($whatsapp_token) || empty($whatsapp_phone)) {
+            return false;
+        }
+        
+        // Format phone number
+        $phone = $this->format_phone_number($phone);
+        if (!$phone) {
+            return false;
+        }
+        
+        // Create reminder message with payment parameters
+        $formatted_date = date('d.m.Y', strtotime($date));
+        $formatted_time = date('H:i', strtotime($time));
+        
+        $message = "⏰ Merhaba {$name}!\n\n";
+        $message .= "Randevunuz için ödeme hatırlatması:\n";
+        $message .= "📅 Tarih: {$formatted_date}\n";
+        $message .= "🕐 Saat: {$formatted_time}\n\n";
+        $message .= "💳 Randevunuzu kaybetmemek için lütfen ödemenizi tamamlayın:\n\n";
+        $message .= $payment_url . "\n\n";
+        $message .= "⚠️ Ödemenizi yakında tamamlamazsanız randevunuz iptal edilecektir.\n\n";
+        $message .= "Teşekkürler! 🙏\n";
+        $message .= "Morpheo Dijital Ekibi";
+        
+        return $this->send_whatsapp_message($phone, $message);
+    }
+    
+    private function send_whatsapp_message($phone, $message) {
+        $whatsapp_token = get_option('morpheo_whatsapp_token', '');
+        $whatsapp_phone = get_option('morpheo_whatsapp_phone', '');
+        
+        // WhatsApp Business API endpoint
+        $url = "https://graph.facebook.com/v17.0/{$whatsapp_phone}/messages";
+        
+        $data = array(
+            'messaging_product' => 'whatsapp',
+            'to' => $phone,
+            'type' => 'text',
+            'text' => array(
+                'body' => $message
+            )
+        );
+        
+        $response = wp_remote_post($url, array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $whatsapp_token,
+                'Content-Type' => 'application/json'
+            ),
+            'body' => json_encode($data),
+            'timeout' => 30
+        ));
+        
+        if (is_wp_error($response)) {
+            error_log('WhatsApp API Error: ' . $response->get_error_message());
+            return false;
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+        
+        if ($response_code === 200) {
+            error_log('WhatsApp message sent successfully to: ' . $phone);
+            return true;
+        } else {
+            error_log('WhatsApp API Error: ' . $response_body);
+            return false;
+        }
+    }
+    
+    private function format_phone_number($phone) {
+        // Remove all non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Add country code if not present
+        if (strlen($phone) === 10 && substr($phone, 0, 1) === '5') {
+            $phone = '90' . $phone;
+        } elseif (strlen($phone) === 11 && substr($phone, 0, 1) === '0') {
+            $phone = '90' . substr($phone, 1);
+        }
+        
+        // Validate Turkish phone number format
+        if (strlen($phone) === 12 && substr($phone, 0, 2) === '90') {
+            return $phone;
+        }
+        
+        return false;
+    }
 }
+?>

@@ -5,6 +5,47 @@
 
   $(document).ready(() => {
     initializeAdmin()
+
+    // Auto-refresh payment status every 30 seconds on payments page
+    if (window.location.href.indexOf("morpheo-calculator-payments") > -1) {
+      setInterval(() => {
+        location.reload()
+      }, 30000)
+    }
+
+    // Confirm before manual payment check
+    $('form[method="post"]').on("submit", function (e) {
+      if ($(this).find('input[name="check_payments"]').length > 0) {
+        if (!confirm("Tüm bekleyen ödemeler kontrol edilecek. Devam etmek istiyor musunuz?")) {
+          e.preventDefault()
+        }
+      }
+    })
+
+    // Copy payment URL to clipboard
+    $(".payment-url").on("click", function () {
+      const text = $(this).text()
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Ödeme URL'si panoya kopyalandı!")
+      })
+    })
+
+    // Highlight expired payments
+    $(".expired-payment").each(function () {
+      $(this).find("td").css("background-color", "#fef2f2")
+    })
+
+    // Auto-update stats every 5 minutes
+    if ($(".stats-grid").length > 0) {
+      setInterval(() => {
+        $.get(window.location.href, (data) => {
+          const newStats = $(data).find(".stats-grid")
+          if (newStats.length > 0) {
+            $(".stats-grid").html(newStats.html())
+          }
+        })
+      }, 300000) // 5 minutes
+    }
   })
 
   function initializeAdmin() {

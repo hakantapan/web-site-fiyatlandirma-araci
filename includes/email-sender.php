@@ -3,6 +3,12 @@
  * Email Sender for Morpheo Calculator
  */
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+require_once MORPHEO_CALCULATOR_PLUGIN_PATH . 'includes/email-templates.php';
+
 class MorpheoEmailSender {
     
     /**
@@ -270,7 +276,7 @@ class MorpheoEmailSender {
         
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: Morpheo Dijital <info@morpheodijital.com>'
+            'From: Morpheo Dijital <noreply@morpheodijital.com>'
         );
         
         $sent = wp_mail($to, $subject, $message, $headers);
@@ -283,4 +289,51 @@ class MorpheoEmailSender {
         
         return $sent;
     }
+    
+    /**
+     * Send appointment confirmation email
+     */
+    public function send_appointment_confirmation($email, $name, $date, $time, $payment_url, $payment_params = array()) {
+        $subject = 'Randevunuz Oluşturuldu - Ödeme Bekleniyor';
+        $message = MorpheoEmailTemplates::get_appointment_confirmation_template($name, $date, $time, $payment_url, $payment_params);
+        
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: Morpheo Dijital <noreply@morpheodijital.com>'
+        );
+        
+        $sent = wp_mail($email, $subject, $message, $headers);
+        
+        if ($sent) {
+            error_log("Appointment confirmation email sent to: {$email}");
+        } else {
+            error_log("Failed to send appointment confirmation email to: {$email}");
+        }
+        
+        return $sent;
+    }
+    
+    /**
+     * Send payment reminder email
+     */
+    public function send_payment_reminder($email, $name, $date, $time, $payment_url, $payment_params = array()) {
+        $subject = 'Ödeme Hatırlatması - Randevunuz İptal Edilebilir';
+        $message = MorpheoEmailTemplates::get_payment_reminder_template($name, $date, $time, $payment_url, $payment_params);
+        
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: Morpheo Dijital <noreply@morpheodijital.com>'
+        );
+        
+        $sent = wp_mail($email, $subject, $message, $headers);
+        
+        if ($sent) {
+            error_log("Payment reminder email sent to: {$email}");
+        } else {
+            error_log("Failed to send payment reminder email to: {$email}");
+        }
+        
+        return $sent;
+    }
 }
+?>
