@@ -911,7 +911,7 @@
             musteri_adi: calculatorData.userData.firstName + " " + calculatorData.userData.lastName,
             musteri_email: calculatorData.userData.email,
             musteri_telefon: calculatorData.userData.phone,
-            proje_tipi: calculatorData.websiteType,
+            proje_tipi: websiteTypes[calculatorData.websiteType]?.name || "Bilinmeyen Proje Tipi",
             tahmini_fiyat: $("#price-range").text(),
             calculator_id: calculatorData.calculatorId || "",
             appointment_id: response.data.appointment_id,
