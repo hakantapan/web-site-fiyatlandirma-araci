@@ -1,11 +1,15 @@
 <?php
+/**
+ * Admin Page for Morpheo Calculator
+ */
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
 // Handle form submission
-if (isset($_POST['submit']) && wp_verify_nonce($_POST['morpheo_calculator_nonce'], 'morpheo_calculator_settings')) {
+if (isset($_POST['submit']) && check_admin_referer('morpheo_calculator_settings', 'morpheo_calculator_nonce')) {
     update_option('morpheo_woocommerce_url', esc_url_raw($_POST['morpheo_woocommerce_url']));
     update_option('morpheo_consultation_fee', sanitize_text_field($_POST['morpheo_consultation_fee']));
     update_option('morpheo_admin_emails', sanitize_text_field($_POST['morpheo_admin_emails']));
@@ -15,7 +19,7 @@ if (isset($_POST['submit']) && wp_verify_nonce($_POST['morpheo_calculator_nonce'
     update_option('morpheo_whatsapp_api_token', sanitize_text_field($_POST['morpheo_whatsapp_api_token']));
     update_option('morpheo_whatsapp_from_number', sanitize_text_field($_POST['morpheo_whatsapp_from_number']));
     
-    echo '<div class="notice notice-success"><p>Ayarlar başarıyla kaydedildi!</p></div>';
+    echo '<div class="notice notice-success"><p>Ayarlar kaydedildi!</p></div>';
 }
 
 // Get current settings
@@ -44,6 +48,7 @@ $whatsapp_from_number = get_option('morpheo_whatsapp_from_number', '');
                     <p class="description">
                         Randevu ödemelerinin yönlendirileceği WooCommerce checkout URL'si. 
                         Örnek: https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu
+                        <br><strong>Not:</strong> Bu URL'ye otomatik olarak randevu parametreleri eklenecektir.
                     </p>
                 </td>
             </tr>
@@ -66,10 +71,7 @@ $whatsapp_from_number = get_option('morpheo_whatsapp_from_number', '');
                 <td>
                     <input type="text" id="morpheo_admin_emails" name="morpheo_admin_emails" 
                            value="<?php echo esc_attr($admin_emails); ?>" class="regular-text" />
-                    <p class="description">
-                        Yeni randevu bildirimlerinin gönderileceği e-posta adresleri (virgülle ayırın). 
-                        Boş bırakılırsa site admin e-postası kullanılır.
-                    </p>
+                    <p class="description">Yeni randevu bildirimlerinin gönderileceği e-posta adresleri (virgülle ayırın)</p>
                 </td>
             </tr>
         </table>
@@ -85,7 +87,7 @@ $whatsapp_from_number = get_option('morpheo_whatsapp_from_number', '');
                         <option value="no" <?php selected($whatsapp_enable, 'no'); ?>>Hayır</option>
                         <option value="yes" <?php selected($whatsapp_enable, 'yes'); ?>>Evet</option>
                     </select>
-                    <p class="description">WhatsApp bildirimlerini etkinleştir/devre dışı bırak</p>
+                    <p class="description">WhatsApp mesaj gönderme özelliğini etkinleştir/devre dışı bırak</p>
                 </td>
             </tr>
             
@@ -96,21 +98,19 @@ $whatsapp_from_number = get_option('morpheo_whatsapp_from_number', '');
                 <td>
                     <input type="text" id="morpheo_whatsapp_api_token" name="morpheo_whatsapp_api_token" 
                            value="<?php echo esc_attr($whatsapp_api_token); ?>" class="regular-text" />
-                    <p class="description">WhatsApp API servisinizden aldığınız token</p>
+                    <p class="description">OtomatikBot.com API token'ınız</p>
                 </td>
             </tr>
             
             <tr>
                 <th scope="row">
-                    <label for="morpheo_whatsapp_from_number">Gönderen Numara</label>
+                    <label for="morpheo_whatsapp_from_number">Gönderen Telefon Numarası</label>
                 </th>
                 <td>
                     <input type="text" id="morpheo_whatsapp_from_number" name="morpheo_whatsapp_from_number" 
                            value="<?php echo esc_attr($whatsapp_from_number); ?>" class="regular-text" 
                            placeholder="905551234567" />
-                    <p class="description">
-                        WhatsApp mesajlarının gönderileceği numara (90 ile başlayan 12 haneli format)
-                    </p>
+                    <p class="description">WhatsApp mesajlarının gönderileceği telefon numarası (90 ile başlayan 12 haneli format)</p>
                 </td>
             </tr>
         </table>
@@ -126,48 +126,9 @@ $whatsapp_from_number = get_option('morpheo_whatsapp_from_number', '');
     
     <h3>Kısa Kod Parametreleri</h3>
     <ul>
-        <li><code>theme</code> - Tema (dark/light) - Varsayılan: dark</li>
-        <li><code>show_appointment</code> - Randevu bölümünü göster (true/false) - Varsayılan: true</li>
+        <li><code>theme="dark"</code> - Tema (dark/light)</li>
+        <li><code>show_appointment="true"</code> - Randevu bölümünü göster (true/false)</li>
     </ul>
     
-    <p><strong>Örnek:</strong> <code>[morpheo_web_calculator theme="light" show_appointment="true"]</code></p>
-    
-    <hr>
-    
-    <h2>Sistem Durumu</h2>
-    <table class="widefat">
-        <thead>
-            <tr>
-                <th>Özellik</th>
-                <th>Durum</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>WordPress Cron</td>
-                <td><?php echo wp_next_scheduled('morpheo_check_payments') ? '✅ Aktif' : '❌ Pasif'; ?></td>
-            </tr>
-            <tr>
-                <td>Ödeme Kontrolü</td>
-                <td><?php echo wp_next_scheduled('morpheo_check_payments') ? '✅ Zamanlandı' : '❌ Zamanlanmadı'; ?></td>
-            </tr>
-            <tr>
-                <td>WhatsApp Entegrasyonu</td>
-                <td><?php echo $whatsapp_enable === 'yes' ? '✅ Aktif' : '❌ Pasif'; ?></td>
-            </tr>
-            <tr>
-                <td>E-posta Bildirimleri</td>
-                <td>✅ Aktif</td>
-            </tr>
-        </tbody>
-    </table>
+    <p><strong>Örnek:</strong> <code>[morpheo_web_calculator theme="light" show_appointment="false"]</code></p>
 </div>
-
-<style>
-.form-table th {
-    width: 200px;
-}
-.widefat th, .widefat td {
-    padding: 10px;
-}
-</style>

@@ -9,29 +9,49 @@ class MorpheoEmailSender {
      * Send customer confirmation email
      */
     public static function sendCustomerConfirmation($appointment_data, $calculator_data, $payment_url = '') {
-        $consultation_fee = get_option('morpheo_consultation_fee', '250');
+        $to = $calculator_data->email;
+        $subject = 'Randevu Onayı - Morpheo Dijital';
+        
+        // Get website type names
+        $website_types = array(
+            'corporate' => 'Kurumsal Website',
+            'ecommerce' => 'E-Ticaret Sitesi',
+            'blog' => 'Blog/İçerik Sitesi',
+            'landing' => 'Özel Kampanya Sayfası'
+        );
+        
+        $project_type = $website_types[$calculator_data->website_type] ?? ucfirst($calculator_data->website_type);
+        $estimated_price = number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺';
         
         // Prepare email data
         $email_data = array(
             'customer_name' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
             'appointment_date' => $appointment_data['appointment_date'],
             'appointment_time' => $appointment_data['appointment_time'],
-            'project_type' => self::getProjectTypeName($calculator_data->website_type),
-            'estimated_price' => number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺',
+            'project_type' => $project_type,
+            'estimated_price' => $estimated_price,
             'page_count' => $calculator_data->page_count,
-            'selected_features' => self::getSelectedFeatures($calculator_data->features),
-            'payment_url' => $payment_url
+            'payment_url' => $payment_url,
+            'selected_features' => array() // You can expand this based on your needs
         );
         
-        $to = $calculator_data->email;
-        $subject = '🎉 Randevunuz Onaylandı - Morpheo Dijital';
-        $message = MorpheoEmailTemplates::getCustomerConfirmationEmail($email_data, empty($payment_url) ? 'paid' : 'pending');
+        $payment_status = !empty($payment_url) ? 'pending' : 'paid';
+        $message = MorpheoEmailTemplates::getCustomerConfirmationEmail($email_data, $payment_status);
+        
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
             'From: Morpheo Dijital <info@morpheodijital.com>'
         );
         
-        return wp_mail($to, $subject, $message, $headers);
+        $sent = wp_mail($to, $subject, $message, $headers);
+        
+        if ($sent) {
+            error_log('Morpheo Calculator: Customer confirmation email sent to ' . $to);
+        } else {
+            error_log('Morpheo Calculator: Failed to send customer confirmation email to ' . $to);
+        }
+        
+        return $sent;
     }
     
     /**
@@ -39,11 +59,31 @@ class MorpheoEmailSender {
      */
     public static function sendAdminNotification($appointment_data, $calculator_data) {
         $admin_emails = get_option('morpheo_admin_emails', '');
+        
         if (empty($admin_emails)) {
             $admin_emails = get_option('admin_email');
         }
         
-        $consultation_fee = get_option('morpheo_consultation_fee', '250');
+        $emails = array_map('trim', explode(',', $admin_emails));
+        $subject = 'Yeni Randevu Bildirimi - Morpheo Dijital';
+        
+        // Get website type names
+        $website_types = array(
+            'corporate' => 'Kurumsal Website',
+            'ecommerce' => 'E-Ticaret Sitesi',
+            'blog' => 'Blog/İçerik Sitesi',
+            'landing' => 'Özel Kampanya Sayfası'
+        );
+        
+        $design_levels = array(
+            'basic' => 'Profesyonel & Sade',
+            'custom' => 'Markanıza Özel',
+            'premium' => 'Lüks & Etkileyici'
+        );
+        
+        $project_type = $website_types[$calculator_data->website_type] ?? ucfirst($calculator_data->website_type);
+        $design_level = $design_levels[$calculator_data->design_complexity] ?? ucfirst($calculator_data->design_complexity);
+        $estimated_price = number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺';
         
         // Prepare email data
         $email_data = array(
@@ -54,183 +94,193 @@ class MorpheoEmailSender {
             'city' => $calculator_data->city,
             'appointment_date' => $appointment_data['appointment_date'],
             'appointment_time' => $appointment_data['appointment_time'],
-            'project_type' => self::getProjectTypeName($calculator_data->website_type),
-            'estimated_price' => number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺',
+            'project_type' => $project_type,
+            'design_level' => $design_level,
+            'business_type' => $project_type,
+            'online_payment' => 'Evet', // You can make this dynamic
+            'estimated_price' => $estimated_price,
             'page_count' => $calculator_data->page_count,
-            'design_level' => self::getDesignLevelName($calculator_data->design_complexity),
-            'business_type' => $calculator_data->website_type,
-            'online_payment' => 'Evet', // This could be dynamic based on features
-            'selected_features' => self::getSelectedFeatures($calculator_data->features)
+            'selected_features' => array() // You can expand this based on your needs
         );
         
-        $to = $admin_emails;
-        $subject = '🚨 Yeni Randevu Bildirimi - ' . $calculator_data->first_name . ' ' . $calculator_data->last_name;
         $message = MorpheoEmailTemplates::getAdminNotificationEmail($email_data);
+        
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: Morpheo Dijital <info@morpheodijital.com>'
+            'From: Morpheo Calculator <noreply@morpheodijital.com>'
         );
         
-        return wp_mail($to, $subject, $message, $headers);
+        $sent = false;
+        foreach ($emails as $email) {
+            if (is_email($email)) {
+                $result = wp_mail($email, $subject, $message, $headers);
+                if ($result) {
+                    $sent = true;
+                    error_log('Morpheo Calculator: Admin notification email sent to ' . $email);
+                } else {
+                    error_log('Morpheo Calculator: Failed to send admin notification email to ' . $email);
+                }
+            }
+        }
+        
+        return $sent;
     }
     
     /**
      * Send appointment reminder email
      */
     public static function sendAppointmentReminder($appointment_data, $calculator_data) {
-        $consultation_fee = get_option('morpheo_consultation_fee', '250');
-        
-        $email_data = array(
-            'customer_name' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
-            'appointment_date' => $appointment_data['appointment_date'],
-            'appointment_time' => $appointment_data['appointment_time'],
-            'project_type' => self::getProjectTypeName($calculator_data->website_type)
-        );
-        
         $to = $calculator_data->email;
-        $subject = '⏰ Randevu Hatırlatması - Yarın Görüşüyoruz!';
-        $message = self::getAppointmentReminderTemplate($email_data);
-        $headers = array(
-            'Content-Type: text/html; charset=UTF-8',
-            'From: Morpheo Dijital <info@morpheodijital.com>'
-        );
+        $subject = 'Randevu Hatırlatması - Morpheo Dijital';
         
-        return wp_mail($to, $subject, $message, $headers);
-    }
-    
-    /**
-     * Get appointment reminder email template
-     */
-    private static function getAppointmentReminderTemplate($data) {
-        return '
+        $message = '
         <!DOCTYPE html>
         <html lang="tr">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Randevu Hatırlatması</title>
+            <title>Randevu Hatırlatması - Morpheo Dijital</title>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8fafc; margin: 0; padding: 20px; }
-                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-                .header { background: linear-gradient(135deg, #059669, #047857); padding: 30px; text-align: center; color: white; }
-                .header h1 { margin: 0; font-size: 24px; }
-                .content { padding: 30px; }
-                .reminder-box { background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 12px; padding: 25px; margin: 20px 0; text-align: center; }
-                .appointment-details { background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }
-                .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-                .detail-row:last-child { border-bottom: none; }
-                .footer { background: #1e293b; color: #94a3b8; padding: 20px; text-align: center; }
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #1d4ed8; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #f9f9f9; }
+                .appointment-details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                .footer { text-align: center; padding: 20px; color: #666; }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
                     <h1>⏰ Randevu Hatırlatması</h1>
-                    <p>Yarın konsültasyon randevunuz var!</p>
                 </div>
                 <div class="content">
-                    <div class="reminder-box">
-                        <h2 style="color: #0c4a6e; margin-bottom: 15px;">📅 Yarın Görüşüyoruz!</h2>
-                        <p style="color: #0c4a6e; font-size: 16px;">
-                            Sayın ' . esc_html($data['customer_name']) . ', yarın web sitesi konsültasyon randevunuz bulunmaktadır.
-                        </p>
-                    </div>
+                    <p>Merhaba ' . esc_html($calculator_data->first_name . ' ' . $calculator_data->last_name) . ',</p>
+                    
+                    <p>Yarın konsültasyon randevunuz bulunmaktadır:</p>
                     
                     <div class="appointment-details">
-                        <h3>📋 Randevu Detayları</h3>
-                        <div class="detail-row">
-                            <span><strong>Tarih:</strong></span>
-                            <span>' . date('d F Y, l', strtotime($data['appointment_date'])) . '</span>
-                        </div>
-                        <div class="detail-row">
-                            <span><strong>Saat:</strong></span>
-                            <span>' . esc_html($data['appointment_time']) . '</span>
-                        </div>
-                        <div class="detail-row">
-                            <span><strong>Proje Türü:</strong></span>
-                            <span>' . esc_html($data['project_type']) . '</span>
-                        </div>
+                        <strong>📅 Tarih:</strong> ' . date('d F Y, l', strtotime($appointment_data['appointment_date'])) . '<br>
+                        <strong>🕐 Saat:</strong> ' . esc_html($appointment_data['appointment_time']) . '<br>
+                        <strong>⏱️ Süre:</strong> 45-60 dakika
                     </div>
                     
-                    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                        <h4 style="color: #92400e; margin-bottom: 10px;">📋 Hazırlık Listesi</h4>
-                        <ul style="color: #92400e; margin: 0; padding-left: 20px;">
-                            <li>Mevcut web siteniz varsa adresini hazırlayın</li>
-                            <li>Beğendiğiniz örnek siteleri belirleyin</li>
-                            <li>Logo ve marka materyallerinizi toplayın</li>
-                            <li>Proje bütçenizi netleştirin</li>
-                        </ul>
-                    </div>
+                    <p><strong>Hazırlık için:</strong></p>
+                    <ul>
+                        <li>Mevcut web siteniz varsa adresini not edin</li>
+                        <li>Beğendiğiniz örnek siteleri belirleyin</li>
+                        <li>Logo ve marka materyallerinizi hazırlayın</li>
+                        <li>Bütçe aralığınızı netleştirin</li>
+                    </ul>
                     
-                    <div style="text-align: center; margin: 25px 0;">
-                        <p>Sorularınız için:</p>
-                        <p><strong>📞 0555 123 45 67</strong></p>
-                        <p><strong>📧 info@morpheodijital.com</strong></p>
-                    </div>
+                    <p>Görüşmek üzere!</p>
                 </div>
                 <div class="footer">
-                    <p>Morpheo Dijital - Profesyonel Web Tasarım</p>
-                    <p>Görüşmek üzere!</p>
+                    <p>Morpheo Dijital<br>
+                    📞 +90 555 123 45 67 | 📧 info@morpheodijital.com</p>
                 </div>
             </div>
         </body>
         </html>';
+        
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: Morpheo Dijital <info@morpheodijital.com>'
+        );
+        
+        $sent = wp_mail($to, $subject, $message, $headers);
+        
+        if ($sent) {
+            error_log('Morpheo Calculator: Appointment reminder email sent to ' . $to);
+        } else {
+            error_log('Morpheo Calculator: Failed to send appointment reminder email to ' . $to);
+        }
+        
+        return $sent;
     }
     
     /**
-     * Helper function to get project type name
+     * Send payment reminder email
      */
-    private static function getProjectTypeName($type) {
-        $types = array(
-            'corporate' => 'Kurumsal Website',
-            'ecommerce' => 'E-Ticaret Sitesi',
-            'blog' => 'Blog/İçerik Sitesi',
-            'landing' => 'Özel Kampanya Sayfası'
+    public static function sendPaymentReminder($appointment_data, $calculator_data, $payment_url) {
+        $to = $calculator_data->email;
+        $subject = 'ACIL: Randevu Ödeme Hatırlatması - Morpheo Dijital';
+        
+        $minutes_left = MorpheoPaymentReminder::getMinutesLeft($appointment_data['created_at']);
+        
+        $message = '
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Ödeme Hatırlatması - Morpheo Dijital</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #fef2f2; border: 2px solid #dc2626; }
+                .payment-button { 
+                    display: inline-block; 
+                    background: #dc2626; 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    font-weight: bold; 
+                    margin: 15px 0;
+                }
+                .footer { text-align: center; padding: 20px; color: #666; }
+                .urgent { color: #dc2626; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>⚠️ ACIL: Ödeme Gerekli</h1>
+                </div>
+                <div class="content">
+                    <p>Merhaba ' . esc_html($calculator_data->first_name . ' ' . $calculator_data->last_name) . ',</p>
+                    
+                    <p class="urgent">Randevunuz için ödeme bekleniyor!</p>
+                    
+                    <p><strong>📅 Randevu:</strong> ' . date('d.m.Y', strtotime($appointment_data['appointment_date'])) . ' - ' . esc_html($appointment_data['appointment_time']) . '</p>
+                    <p><strong>⏰ Kalan Süre:</strong> ' . $minutes_left . ' dakika</p>
+                    
+                    <p class="urgent">Ödeme yapılmazsa randevunuz otomatik olarak iptal olacaktır!</p>
+                    
+                    <div style="text-align: center;">
+                        <a href="' . esc_url($payment_url) . '" class="payment-button" target="_blank">
+                            💳 Hemen Ödeme Yap
+                        </a>
+                    </div>
+                    
+                    <p style="word-break: break-all; background: white; padding: 10px; border-radius: 5px;">
+                        <strong>Ödeme Linki:</strong><br>
+                        <a href="' . esc_url($payment_url) . '" target="_blank">' . esc_html($payment_url) . '</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Morpheo Dijital<br>
+                    📞 +90 555 123 45 67 | 📧 info@morpheodijital.com</p>
+                </div>
+            </div>
+        </body>
+        </html>';
+        
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: Morpheo Dijital <info@morpheodijital.com>'
         );
-        return $types[$type] ?? ucfirst($type);
-    }
-    
-    /**
-     * Helper function to get design level name
-     */
-    private static function getDesignLevelName($level) {
-        $levels = array(
-            'basic' => 'Profesyonel & Sade',
-            'custom' => 'Markanıza Özel',
-            'premium' => 'Lüks & Etkileyici'
-        );
-        return $levels[$level] ?? ucfirst($level);
-    }
-    
-    /**
-     * Helper function to get selected features
-     */
-    private static function getSelectedFeatures($features_json) {
-        if (empty($features_json)) {
-            return array();
+        
+        $sent = wp_mail($to, $subject, $message, $headers);
+        
+        if ($sent) {
+            error_log('Morpheo Calculator: Payment reminder email sent to ' . $to);
+        } else {
+            error_log('Morpheo Calculator: Failed to send payment reminder email to ' . $to);
         }
         
-        $features = json_decode($features_json, true);
-        if (!is_array($features)) {
-            return array();
-        }
-        
-        $feature_names = array(
-            'seo' => 'SEO Optimizasyonu',
-            'cms' => 'İçerik Yönetimi',
-            'multilang' => 'Çoklu Dil',
-            'payment' => 'Online Ödeme',
-            'analytics' => 'Analytics',
-            'social' => 'Sosyal Medya Entegrasyonu'
-        );
-        
-        $selected = array();
-        foreach ($features as $feature) {
-            if (isset($feature_names[$feature])) {
-                $selected[] = $feature_names[$feature];
-            }
-        }
-        
-        return $selected;
+        return $sent;
     }
 }

@@ -128,11 +128,13 @@ class MorpheoWhatsAppSender {
      * Sends a WhatsApp confirmation message to the customer after appointment booking.
      */
     public static function sendCustomerConfirmationWhatsApp($appointment_data, $calculator_data, $payment_url = '') {
+        $consultation_fee = get_option('morpheo_consultation_fee', '250');
+        
         $message = "🎉 Merhaba " . $calculator_data->first_name . " " . $calculator_data->last_name . ",\n\n";
         $message .= "Randevunuz başarıyla oluşturuldu!\n\n";
         $message .= "📅 *Tarih:* " . date('d.m.Y', strtotime($appointment_data['appointment_date'])) . "\n";
         $message .= "🕐 *Saat:* " . $appointment_data['appointment_time'] . "\n";
-        $message .= "💰 *Konsültasyon Ücreti:* " . number_format(get_option('morpheo_consultation_fee', '250'), 0, ',', '.') . " ₺\n\n";
+        $message .= "💰 *Konsültasyon Ücreti:* " . number_format($consultation_fee, 0, ',', '.') . " ₺\n\n";
         
         if (!empty($payment_url)) {
             // Ensure the URL is on its own line for better WhatsApp parsing
@@ -153,14 +155,18 @@ class MorpheoWhatsAppSender {
      * Sends a WhatsApp notification message to the admin after a new appointment booking.
      */
     public static function sendAdminNotificationWhatsApp($appointment_data, $calculator_data) {
+        $consultation_fee = get_option('morpheo_consultation_fee', '250');
+        $estimated_price = number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺';
+        
         $message = "🚨 *YENİ RANDEVU BİLDİRİMİ!*\n\n";
         $message .= "👤 *Müşteri:* " . $calculator_data->first_name . " " . $calculator_data->last_name . "\n";
         $message .= "📞 *Telefon:* " . $calculator_data->phone . "\n";
         $message .= "📧 *E-posta:* " . $calculator_data->email . "\n";
         $message .= "📅 *Randevu:* " . date('d.m.Y', strtotime($appointment_data['appointment_date'])) . " " . $appointment_data['appointment_time'] . "\n";
         $message .= "🌐 *Proje Tipi:* " . self::getProjectTypeName($calculator_data->website_type) . "\n";
-        $message .= "💰 *Tahmini Fiyat:* " . number_format($calculator_data->min_price, 0, ',', '.') . " - " . number_format($calculator_data->max_price, 0, ',', '.') . " ₺\n";
-        $message .= "💳 *Ödeme Durumu:* Beklemede\n\n";
+        $message .= "💰 *Tahmini Fiyat:* " . $estimated_price . "\n";
+        $message .= "💳 *Konsültasyon Ücreti:* " . number_format($consultation_fee, 0, ',', '.') . " ₺\n";
+        $message .= "📊 *Ödeme Durumu:* Beklemede\n\n";
         $message .= "🏃‍♂️ Hemen iletişime geçin!";
 
         // Send to the configured 'from' number, assuming it's an admin's number.
@@ -189,12 +195,15 @@ class MorpheoWhatsAppSender {
      * Sends a WhatsApp reminder message for pending payments.
      */
     public static function sendPaymentReminderWhatsApp($appointment_data, $calculator_data, $payment_url) {
+        $minutes_left = MorpheoPaymentReminder::getMinutesLeft($appointment_data['created_at']);
+        
         $message = "⚠️ *ACIL: Randevunuz İptal Olmak Üzere!*\n\n";
         $message .= "Merhaba " . $calculator_data->first_name . " " . $calculator_data->last_name . ",\n\n";
         $message .= "📅 Randevunuz için ödeme bekleniyor.\n";
-        $message .= "⏰ Kalan süre: " . MorpheoPaymentReminder::getMinutesLeft($appointment_data['created_at']) . " dakika.\n\n";
+        $message .= "⏰ Kalan süre: " . $minutes_left . " dakika.\n\n";
         $message .= "❌ Ödeme yapılmazsa randevunuz otomatik olarak iptal olacaktır!\n\n";
-        $message .= "💳 *Hemen ödeme yapın:*\n" . $payment_url . "\n\n";
+        $message .= "💳 *Hemen ödeme yapın:*\n";
+        $message .= $payment_url . "\n\n";
         $message .= "📞 Yardım için: Morpheo Dijital";
         
         return self::sendMessage($calculator_data->phone, $message);

@@ -4,7 +4,7 @@
  * Plugin URI: https://morpheodijital.com
  * GitHub Plugin URI: https://github.com/hakantapan/web-site-fiyatlandirma-araci
  * Description: Professional website price calculator with dark mode, e-commerce modules, and appointment booking
- * Version: 2.2.2
+ * Version: 2.2.3
  * Author: Morpheo Dijital
  * License: GPL v2 or later
  * Text Domain: morpheo-calculator
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('MORPHEO_CALC_VERSION', '2.2.2');
+define('MORPHEO_CALC_VERSION', '2.2.3');
 define('MORPHEO_CALC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MORPHEO_CALC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
@@ -314,11 +314,30 @@ class MorpheoCalculator {
                 // Get WooCommerce URL from settings
                 $woocommerce_url = get_option('morpheo_woocommerce_url', 'https://morpheodijital.com/satis/checkout-link/?urun=web-site-on-gorusme-randevusu');
                 
-                // Create payment URL parameters
+                // Get website type names
+                $website_types = array(
+                    'corporate' => 'Kurumsal Website',
+                    'ecommerce' => 'E-Ticaret Sitesi',
+                    'blog' => 'Blog/İçerik Sitesi',
+                    'landing' => 'Özel Kampanya Sayfası'
+                );
+                
+                $project_type = $website_types[$calculator_data->website_type] ?? ucfirst($calculator_data->website_type);
+                $estimated_price = number_format($calculator_data->min_price, 0, ',', '.') . ' - ' . number_format($calculator_data->max_price, 0, ',', '.') . ' ₺';
+                
+                // Create comprehensive payment URL parameters
                 $payment_params = array(
-                    'appointment_id' => $appointment_id,
+                    'randevu_tarihi' => $appointment_date,
+                    'randevu_saati' => $appointment_time,
+                    'musteri_adi' => $calculator_data->first_name . ' ' . $calculator_data->last_name,
+                    'musteri_email' => $calculator_data->email,
+                    'musteri_telefon' => $calculator_data->phone,
+                    'proje_tipi' => $project_type,
+                    'tahmini_fiyat' => $estimated_price,
                     'calculator_id' => $calculator_id,
-                    'ucret' => $consultation_fee
+                    'appointment_id' => $appointment_id,
+                    'ucret' => $consultation_fee,
+                    'urun' => 'web-site-konsultasyon'
                 );
                 
                 // Build the payment URL properly
